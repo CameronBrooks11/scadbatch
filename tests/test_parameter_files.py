@@ -151,3 +151,15 @@ def test_an_empty_file_reads_as_no_parameter_sets(tmp_path):
     src.write_text("")
 
     assert read_csv(src) == []
+
+
+def test_json_root_must_be_object(tmp_path):
+    """A JSON file whose root is a list (e.g. []) must report a clear error."""
+    src = tmp_path / "p.json"
+    src.write_text("[]\n")
+
+    with pytest.raises(ValueError) as excinfo:
+        read_json(src)
+
+    assert "JSON root must be a dict" in str(excinfo.value)
+    assert "'parameterSets'" in str(excinfo.value)
