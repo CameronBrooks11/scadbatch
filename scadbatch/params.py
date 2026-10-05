@@ -114,8 +114,15 @@ def read_csv(csv_path, encoding=DEFAULT_ENCODING):
         # warns, falls back and still exits 0. Omitting the flag is the only way to get
         # the engine's own behaviour on this route. A cell whose text is "" still asks
         # for the empty string -- see coerce_cell.
-        values = {k: v for k, v in zip(header, row, strict=True) if v.strip() != ""}
-        unset = [k for k in header if k not in values and k != "exported_filename"]
+        # exported_filename names the output; it is not a parameter of the model, so the
+        # rule above does not apply to it. Dropping it would lose the warning that a blank
+        # name fell back to model_<index>, and write null where the summary said "".
+        values = {
+            k: v
+            for k, v in zip(header, row, strict=True)
+            if v.strip() != "" or k == "exported_filename"
+        }
+        unset = [k for k in header if k not in values]
         if unset:
             # OpenSCAD is silent when it ignores a value; we need not be. Without this a
             # column someone forgot to fill exports a whole batch at the defaults with

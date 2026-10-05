@@ -325,6 +325,18 @@ def test_a_json_empty_string_converts_to_unset_like_openscad_treats_it(tmp_path)
     assert json.loads(back.read_text())["parameterSets"] == {"a": {}}
 
 
+def test_a_blank_name_column_is_kept_because_it_is_not_a_parameter(tmp_path):
+    """exported_filename names the output rather than setting anything on the model, so the
+    unset rule does not apply: dropping it loses the warning that a blank name fell back to
+    model_<index>, and writes null where the summary said ""."""
+    src = tmp_path / "p.csv"
+    src.write_text("exported_filename,n\n,3\n")
+
+    (row,) = read_csv(src)
+
+    assert row == {"exported_filename": "", "n": "3"}
+
+
 def test_each_row_says_which_parameters_it_leaves_unset(tmp_path, caplog):
     """OpenSCAD is silent when it ignores a value. A column nobody filled would otherwise
     export a whole batch at the defaults with nothing anywhere to say so."""
