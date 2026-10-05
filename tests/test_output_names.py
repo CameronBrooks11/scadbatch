@@ -186,6 +186,17 @@ def test_template_can_resolve_duplicates(fake_openscad, tmp_path):
     assert [r.name for r in result.results] == ["dup_0", "dup_1"]
 
 
+def test_a_blank_cell_does_not_stop_a_templated_batch(fake_openscad, tmp_path):
+    """Names are computed for every case before anything exports, so without the file's
+    columns reaching output_name one blank cell refuses the whole run."""
+    csv = tmp_path / "p.csv"
+    csv.write_text("exported_filename,w,label\na,10,hi\nb,20,\nc,30,yo\n")
+
+    result = run(fake_openscad, str(csv), tmp_path / "o", name_template="{name}_{label}")
+
+    assert [r.name for r in result.results] == ["a_hi", "b_", "c_yo"]
+
+
 def test_bad_template_is_refused_before_anything_runs(fake_openscad, params_csv, tmp_path):
     with pytest.raises(ValueError, match="could not be filled"):
         run(fake_openscad, params_csv, tmp_path / "o", name_template="{nope}")
@@ -255,3 +266,18 @@ def test_exit_zero_without_an_output_file_is_a_failure(fake_openscad, tmp_path, 
     assert case.ok is False and case.returncode == 0
     assert case.stderr.startswith("Can't open file")  # OpenSCAD's own message is kept
     assert list((tmp_path / "o").iterdir()) == []
+
+
+def test_a_template_may_name_a_parameter_this_set_leaves_unset():
+    """An unset parameter is absent from the row, so without the columns the template could
+    not be filled and one blank cell would stop the whole batch before anything exported."""
+    assert (
+        output_name({"exported_filename": "b", "w": 20}, 1, "{name}_{label}", {"w", "label"})
+        == "b_"
+    )
+
+
+def test_a_template_naming_no_parameter_at_all_is_still_an_error():
+    """The safety net the columns must not dissolve: a typo stays a typo."""
+    with pytest.raises(ValueError, match=r"'labl'.*available fields:"):
+        output_name({"exported_filename": "b", "w": 20}, 1, "{name}_{labl}", {"w", "label"})

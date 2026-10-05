@@ -574,7 +574,10 @@ def batch_export(
         log.info("Selected parameter set indices: %s", sorted(selected))
         cases = [(idx, params) for idx, params in cases if idx in selected]
 
-    names = {idx: output_name(params, idx, name_template) for idx, params in cases}
+    # Every parameter any set mentions, so a name template may reference one that this
+    # particular set leaves unset without the batch refusing to start.
+    columns = {k for params in parameters for k in params}
+    names = {idx: output_name(params, idx, name_template, columns) for idx, params in cases}
     for idx, params in cases:
         raw = params.get("exported_filename")
         if name_template is None and raw is not None and names[idx] != str(raw):
