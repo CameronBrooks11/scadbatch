@@ -309,9 +309,10 @@ def test_a_set_missing_a_parameter_survives_the_json_csv_json_round_trip(tmp_pat
     }
 
 
-def test_an_explicit_empty_string_survives_the_json_csv_json_round_trip(tmp_path):
-    """A set that really does ask for "" must not be turned into one that asks for nothing;
-    that is the other half of giving an empty cell a meaning."""
+def test_a_json_empty_string_converts_to_unset_like_openscad_treats_it(tmp_path):
+    """OpenSCAD ignores "" for any parameter whose default is not a string and keeps the
+    default -- measured through -p/-P on 2026.08.01. Carrying it through as an empty string
+    would make the CSV route build a model the JSON route does not, which is #63 again."""
     src = tmp_path / "in.json"
     src.write_text(json.dumps({"parameterSets": {"a": {"label": ""}}}))
     csv_file = tmp_path / "mid.csv"
@@ -320,4 +321,33 @@ def test_an_explicit_empty_string_survives_the_json_csv_json_round_trip(tmp_path
     json_to_csv(src, csv_file)
     csv_to_json(csv_file, back)
 
-    assert json.loads(back.read_text())["parameterSets"] == {"a": {"label": ""}}
+    assert csv_file.read_text().splitlines()[1] == "a,"  # a blank cell, not six quotes
+    assert json.loads(back.read_text())["parameterSets"] == {"a": {}}
+
+
+def test_each_row_says_which_parameters_it_leaves_unset(tmp_path, caplog):
+    """OpenSCAD is silent when it ignores a value. A column nobody filled would otherwise
+    export a whole batch at the defaults with nothing anywhere to say so."""
+    src = tmp_path / "p.csv"
+    src.write_text("exported_filename,x,height\na,1,5\nb,2,\nc,3,\n")
+
+    with caplog.at_level("INFO", logger="scadbatch"):
+        read_csv(src)
+
+    said = [r.getMessage() for r in caplog.records if "unset" in r.getMessage()]
+    assert len(said) == 2, said  # rows b and c, not row a
+    assert "line 3 leaves height unset" in said[0]
+    assert "line 4 leaves height unset" in said[1]
+
+
+def test_a_whitespace_only_cell_is_as_unset_as_an_empty_one(tmp_path):
+    """OpenSCAD cannot convert " " to a number either, so it keeps the default. Leaving the
+    flag in sends -Dn=" " and builds something else -- the same defect through a spelling a
+    spreadsheet shows as blank."""
+    src = tmp_path / "p.csv"
+    src.write_text("exported_filename,x,y,z\nb,3, ,\t\n")
+
+    (b,) = read_csv(src)
+
+    assert b == {"exported_filename": "b", "x": "3"}
+    assert construct_d_flags(b) == ["-Dx=3"]

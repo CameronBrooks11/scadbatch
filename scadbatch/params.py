@@ -58,10 +58,12 @@ def read_csv(csv_path, encoding=DEFAULT_ENCODING):
     Every row must have one cell per header column. Blank lines are skipped, before the
     header as well as after it; a line of only whitespace is not blank, it is one cell.
 
-    An empty cell leaves that parameter out of the row, so the model's own default applies
-    rather than an empty string. To ask for the empty string, give a cell whose text is
-    ``""`` -- which CSV spells with six quote characters, since ``""`` on its own is how an
-    empty field is quoted and parses the same as a bare comma.
+    A cell with nothing in it -- empty, or only whitespace -- leaves that parameter out of
+    the row, so the model's own default applies. This is what OpenSCAD does with a parameter
+    set it cannot convert to the model's declared type, and the ``-D`` flags a CSV row becomes
+    have no other way to express it. To ask for the empty string instead, give a cell whose
+    text is ``""``; CSV spells that with six quote characters, since ``""`` alone is just how
+    an empty field is quoted.
 
     Args:
         csv_path (str): Path to the CSV file.
@@ -103,12 +105,23 @@ def read_csv(csv_path, encoding=DEFAULT_ENCODING):
                 f"column{'' if len(header) == 1 else 's'}, so it is not clear which value belongs "
                 f"to which parameter. Give every row one cell per column; {hint}."
             )
-        # An empty cell leaves the parameter out, so the model's default applies. CSV
-        # cannot hold an absent cell, and sending the empty string instead is worse
-        # than useless: OpenSCAD cannot read "" as a number, so it warns, falls back
-        # and exits 0, building a model the row did not ask for. A cell whose text is
-        # "" still means the empty string -- see coerce_cell.
-        rows.append({k: v for k, v in zip(header, row, strict=True) if v != ""})
+        # A cell with nothing in it leaves the parameter out, so the model's default
+        # applies. That is what OpenSCAD itself does with a parameter set: the model's
+        # declared default fixes the type, and a value it cannot convert -- "", " ",
+        # "abc", undef, true -- is ignored, silently, leaving the default (measured on
+        # 2026.08.01 through -p/-P). The -D flags a CSV row becomes are typed by the
+        # literal instead, so "" reaches a numeric parameter as a string and OpenSCAD
+        # warns, falls back and still exits 0. Omitting the flag is the only way to get
+        # the engine's own behaviour on this route. A cell whose text is "" still asks
+        # for the empty string -- see coerce_cell.
+        values = {k: v for k, v in zip(header, row, strict=True) if v.strip() != ""}
+        unset = [k for k in header if k not in values and k != "exported_filename"]
+        if unset:
+            # OpenSCAD is silent when it ignores a value; we need not be. Without this a
+            # column someone forgot to fill exports a whole batch at the defaults with
+            # nothing anywhere to say so.
+            log.info("%s line %d leaves %s unset.", csv_path, start, ", ".join(unset))
+        rows.append(values)
     return rows
 
 
@@ -174,7 +187,7 @@ def sanitize_filename(name, fallback):
     return safe or fallback
 
 
-def output_name(param_set, index, template=None):
+def output_name(param_set, index, template=None, columns=()):
     """
     The file name (without extension) for one parameter set.
 
@@ -185,14 +198,21 @@ def output_name(param_set, index, template=None):
 
     The result is passed through :func:`sanitize_filename`.
 
+    ``columns`` names every parameter the input file has, so a template can reference one
+    the set leaves unset -- which renders empty, as it did before an unset parameter was
+    distinguishable from an empty one. A field in neither is still an error, so a typo in the
+    template is still caught.
+
     Raises:
-        ValueError: If the template names a field the parameter set does not have.
+        ValueError: If the template names a field that is not a parameter of the input.
     """
     default = str(param_set.get("exported_filename", f"model_{index}"))
     if template is None:
         raw = default
     else:
-        fields = {k: v for k, v in param_set.items() if k != "exported_filename"}
+        fields = dict.fromkeys(columns, "")
+        fields.update({k: v for k, v in param_set.items() if k != "exported_filename"})
+        fields.pop("exported_filename", None)
         fields.update(name=default, index=index)
         try:
             raw = template.format(**fields)
@@ -634,11 +654,12 @@ def json_to_csv(json_file, csv_file, encoding=DEFAULT_ENCODING):
         writer.writeheader()
         for param_set in parameter_sets:
             row = {"exported_filename": param_set.get("exported_filename", "model")}
+            # A key this set does not have becomes a blank cell, which read_csv reads back
+            # as unset. So does a value of "", which is deliberate: OpenSCAD ignores "" for
+            # any parameter whose default is not a string, so writing it through as an empty
+            # string would make the CSV route build a model the JSON route does not.
             for key in all_keys - {"exported_filename"}:
-                # A key this set does not have becomes an empty cell, which read_csv reads
-                # back as absent. A key whose value is the empty string goes through
-                # _csv_cell, which spells it so the distinction survives.
-                row[key] = _csv_cell(param_set[key]) if key in param_set else ""
+                row[key] = _csv_cell(param_set.get(key, ""))
             writer.writerow(row)
     log.info("Converted %s to %s.", json_file, csv_file)
 
@@ -656,10 +677,7 @@ def _csv_cell(value):
     does not record it.
     """
     if isinstance(value, str):
-        # An empty cell means "not set" to read_csv, so the empty string is written as the
-        # two characters "" -- the spelling coerce_cell reads back as the empty string. The
-        # csv writer escapes them, so the file holds six quotes.
-        return '""' if value == "" else value
+        return value
     if isinstance(value, bool):
         return "true" if value else "false"
     if isinstance(value, (int, float)):
