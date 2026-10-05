@@ -6,7 +6,13 @@ import logging
 
 import pytest
 
-from scadbatch.params import coerce_cell, construct_d_flags, csv_to_json, json_to_csv
+from scadbatch.params import (
+    coerce_cell,
+    construct_d_flags,
+    csv_to_json,
+    json_to_csv,
+    read_csv,
+)
 
 
 def convert(tmp_path, cells):
@@ -211,3 +217,107 @@ def test_cli_reports_an_unserialisable_json_value_without_a_traceback(tmp_path, 
     assert code == 1
     assert captured.err.startswith("Error: Cannot serialize dict")
     assert "Traceback" not in captured.err
+
+
+# --- an empty cell is a parameter that was not set -----------------------------------
+
+
+def test_an_empty_cell_leaves_the_parameter_out(tmp_path):
+    """CSV cannot hold an absent cell, so an empty one has to mean it: a parameter the row
+    does not set, left to the model's default."""
+    src = tmp_path / "p.csv"
+    src.write_text("exported_filename,x,y\na,1,2\nb,3,\n")
+
+    a, b = read_csv(src)
+
+    assert a == {"exported_filename": "a", "x": "1", "y": "2"}
+    assert b == {"exported_filename": "b", "x": "3"}  # no 'y' at all
+
+
+def test_a_cell_holding_two_quote_characters_is_still_the_empty_string(tmp_path):
+    """So nothing becomes inexpressible. The cell's *text* has to be "" for coerce_cell to
+    read it as the empty string, and CSV spells that with six quotes: `""` in the file is
+    the quoting of an empty field, which the parser yields as '' exactly like a bare comma
+    does, so it cannot carry the distinction."""
+    src = tmp_path / "p.csv"
+    src.write_text('exported_filename,y\nb,""""""\n')
+
+    (b,) = read_csv(src)
+
+    # read_csv hands back the cell's text; coerce_cell is what turns it into a value.
+    assert b == {"exported_filename": "b", "y": '""'}
+    assert coerce_cell(b["y"]) == ""
+
+
+def test_a_two_quote_cell_is_not_confused_with_an_empty_one(tmp_path):
+    src = tmp_path / "p.csv"
+    src.write_text('exported_filename,y\nquoted,""""""\nbare,\n')
+
+    quoted, bare = read_csv(src)
+
+    assert quoted == {"exported_filename": "quoted", "y": '""'}
+    assert bare == {"exported_filename": "bare"}  # the key is gone, not empty
+
+
+def test_an_empty_cell_sends_no_flag_rather_than_an_empty_string(tmp_path):
+    """The defect in #63. OpenSCAD cannot read "" as a number: it warns, falls back and
+    exits 0, so the wrong model is built and no gate sees it."""
+    src = tmp_path / "p.csv"
+    src.write_text("exported_filename,x,y\nb,3,\n")
+
+    (b,) = read_csv(src)
+
+    assert construct_d_flags(b) == ["-Dx=3"]
+
+
+def test_a_two_quote_cell_does_send_an_empty_string(tmp_path):
+    src = tmp_path / "p.csv"
+    src.write_text('exported_filename,x,y\nb,3,""""""\n')
+
+    (b,) = read_csv(src)
+
+    assert construct_d_flags(b) == ["-Dx=3", '-Dy=""']
+
+
+def test_csv_to_json_leaves_out_a_parameter_whose_cell_is_empty(tmp_path):
+    src = tmp_path / "p.csv"
+    src.write_text("exported_filename,x,y\na,1,2\nb,3,\n")
+    out = tmp_path / "p.json"
+
+    csv_to_json(src, out)
+
+    assert json.loads(out.read_text())["parameterSets"] == {
+        "a": {"x": 1, "y": 2},
+        "b": {"x": 3},
+    }
+
+
+def test_a_set_missing_a_parameter_survives_the_json_csv_json_round_trip(tmp_path):
+    """#63's case end to end: `b` has no `y` in the JSON, and must still have none after a
+    trip through CSV, or the round trip changes what gets built."""
+    src = tmp_path / "in.json"
+    src.write_text(json.dumps({"parameterSets": {"a": {"x": "1", "y": "2"}, "b": {"x": "3"}}}))
+    csv_file = tmp_path / "mid.csv"
+    back = tmp_path / "out.json"
+
+    json_to_csv(src, csv_file)
+    csv_to_json(csv_file, back)
+
+    assert json.loads(back.read_text())["parameterSets"] == {
+        "a": {"x": 1, "y": 2},
+        "b": {"x": 3},
+    }
+
+
+def test_an_explicit_empty_string_survives_the_json_csv_json_round_trip(tmp_path):
+    """A set that really does ask for "" must not be turned into one that asks for nothing;
+    that is the other half of giving an empty cell a meaning."""
+    src = tmp_path / "in.json"
+    src.write_text(json.dumps({"parameterSets": {"a": {"label": ""}}}))
+    csv_file = tmp_path / "mid.csv"
+    back = tmp_path / "out.json"
+
+    json_to_csv(src, csv_file)
+    csv_to_json(csv_file, back)
+
+    assert json.loads(back.read_text())["parameterSets"] == {"a": {"label": ""}}

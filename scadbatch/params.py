@@ -58,6 +58,11 @@ def read_csv(csv_path, encoding=DEFAULT_ENCODING):
     Every row must have one cell per header column. Blank lines are skipped, before the
     header as well as after it; a line of only whitespace is not blank, it is one cell.
 
+    An empty cell leaves that parameter out of the row, so the model's own default applies
+    rather than an empty string. To ask for the empty string, give a cell whose text is
+    ``""`` -- which CSV spells with six quote characters, since ``""`` on its own is how an
+    empty field is quoted and parses the same as a bare comma.
+
     Args:
         csv_path (str): Path to the CSV file.
         encoding (str): Text encoding of the file; UTF-8 with an optional byte-order mark
@@ -98,7 +103,12 @@ def read_csv(csv_path, encoding=DEFAULT_ENCODING):
                 f"column{'' if len(header) == 1 else 's'}, so it is not clear which value belongs "
                 f"to which parameter. Give every row one cell per column; {hint}."
             )
-        rows.append(dict(zip(header, row, strict=True)))
+        # An empty cell leaves the parameter out, so the model's default applies. CSV
+        # cannot hold an absent cell, and sending the empty string instead is worse
+        # than useless: OpenSCAD cannot read "" as a number, so it warns, falls back
+        # and exits 0, building a model the row did not ask for. A cell whose text is
+        # "" still means the empty string -- see coerce_cell.
+        rows.append({k: v for k, v in zip(header, row, strict=True) if v != ""})
     return rows
 
 
@@ -625,7 +635,10 @@ def json_to_csv(json_file, csv_file, encoding=DEFAULT_ENCODING):
         for param_set in parameter_sets:
             row = {"exported_filename": param_set.get("exported_filename", "model")}
             for key in all_keys - {"exported_filename"}:
-                row[key] = _csv_cell(param_set.get(key, ""))
+                # A key this set does not have becomes an empty cell, which read_csv reads
+                # back as absent. A key whose value is the empty string goes through
+                # _csv_cell, which spells it so the distinction survives.
+                row[key] = _csv_cell(param_set[key]) if key in param_set else ""
             writer.writerow(row)
     log.info("Converted %s to %s.", json_file, csv_file)
 
@@ -643,7 +656,10 @@ def _csv_cell(value):
     does not record it.
     """
     if isinstance(value, str):
-        return value
+        # An empty cell means "not set" to read_csv, so the empty string is written as the
+        # two characters "" -- the spelling coerce_cell reads back as the empty string. The
+        # csv writer escapes them, so the file holds six quotes.
+        return '""' if value == "" else value
     if isinstance(value, bool):
         return "true" if value else "false"
     if isinstance(value, (int, float)):

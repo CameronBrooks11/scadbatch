@@ -199,6 +199,7 @@ scadbatch json2csv examples/sign/sign.json examples/sign/sign_converted.csv
 
 - The CSV file should have a header row with parameter names.
 - Each subsequent row defines a set of parameters for the OpenSCAD model, with one cell per header column. A row with more or fewer cells is rejected by line number, rather than guessed at.
+- An empty cell leaves that parameter out of the row, so the model's own default applies. This is how one row sets a parameter and another does not. An empty cell is *not* the empty string: OpenSCAD cannot read `""` as a number, so it warns, falls back and still exits 0, which would build a model the row never asked for. To ask for the empty string, give a cell whose text is `""` — type `""` into a spreadsheet cell, or write six quote characters in raw CSV, since `""` on its own is just how CSV quotes an empty field.
 - An `exported_filename` column names the output files; without it files are named `model_<index>`, or use `--name-template`. Names are made filesystem-safe automatically, and two rows may not share a name.
 - Files are read as UTF-8 (a byte-order mark is tolerated) and written as UTF-8. For a spreadsheet export in another encoding, pass `--encoding` or fill in the GUI's Parameter File Encoding field; note that Excel's "Unicode text" export is UTF-16 **and tab-separated**, which this tool does not read — save as "CSV UTF-8" instead.
 
