@@ -118,6 +118,11 @@ def read_json(json_path, encoding=DEFAULT_ENCODING):
         ValueError: If the file is not text in that encoding, or not valid JSON.
     """
     data = json.loads(_read_text(json_path, encoding))
+    if not isinstance(data, dict):
+        raise ValueError(
+            f"{json_path}: JSON root must be a dict with a 'parameterSets' key, "
+            f"but got {type(data).__name__}."
+        )
     parameter_sets = data.get("parameterSets", {})
     parameters = []
     for name, params in parameter_sets.items():
