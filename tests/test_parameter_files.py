@@ -153,13 +153,96 @@ def test_an_empty_file_reads_as_no_parameter_sets(tmp_path):
     assert read_csv(src) == []
 
 
-def test_json_root_must_be_object(tmp_path):
-    """A JSON file whose root is a list (e.g. []) must report a clear error."""
+# --- a Customizer file that is not shaped like one ----------------------------------
+
+# Every shape read_json cannot read, and the JSON name of what was found there. A
+# Customizer file is {"parameterSets": {"<set>": {"<param>": <value>}}}, so there are three
+# places to get wrong and the message has to say which one.
+BAD_SHAPES = [
+    ("[]", "root", "array"),
+    ('"hello"', "root", "string"),
+    ("42", "root", "number"),
+    ("true", "root", "boolean"),
+    ("null", "root", "null"),
+    ('{"parameterSets": []}', "parameterSets", "array"),
+    ('{"parameterSets": "nope"}', "parameterSets", "string"),
+    ('{"parameterSets": 1}', "parameterSets", "number"),
+    ('{"parameterSets": {"lid": "nope"}}', "lid", "string"),
+    ('{"parameterSets": {"lid": [1, 2]}}', "lid", "array"),
+    ('{"parameterSets": {"lid": 7}}', "lid", "number"),
+    ('{"parameterSets": {"lid": null}}', "lid", "null"),
+]
+
+
+@pytest.mark.parametrize("text,where,found", BAD_SHAPES, ids=[c[0][:28] for c in BAD_SHAPES])
+def test_a_file_not_shaped_like_a_parameter_set_file_names_the_place(tmp_path, text, where, found):
+    """Three of these reached the CLI as a traceback, because it catches ValueError and
+    TypeError and read_json raised AttributeError. The message has to say which of the three
+    levels was wrong and what was there instead."""
     src = tmp_path / "p.json"
-    src.write_text("[]\n")
+    src.write_text(text)
 
     with pytest.raises(ValueError) as excinfo:
         read_json(src)
 
-    assert "JSON root must be a dict" in str(excinfo.value)
-    assert "'parameterSets'" in str(excinfo.value)
+    message = str(excinfo.value)
+    assert "p.json" in message
+    assert where in message
+    assert found in message
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "{}",
+        '{"fileFormatVersion": "1"}',
+        '{"parameterSets": {}}',
+        '{"parameterSets": {"a": {}}}',
+    ],
+)
+def test_a_file_with_no_sets_to_read_is_not_an_error(tmp_path, text):
+    """OpenSCAD accepts all of these, so refusing them would make us stricter than the
+    engine. An absent parameterSets key reads as no sets, not as a malformed file."""
+    src = tmp_path / "p.json"
+    src.write_text(text)
+
+    assert read_json(src) == ([{"exported_filename": "a"}] if '"a"' in text else [])
+
+
+@pytest.mark.parametrize(
+    "text",
+    ['{"parameterSets": []}', '{"parameterSets": {"lid": "nope"}}'],
+    ids=["parameterSets-not-an-object", "set-not-an-object"],
+)
+@pytest.mark.parametrize("command", ["json2csv", "export"])
+def test_the_cli_reports_a_bad_shape_without_a_traceback(tmp_path, capsys, text, command):
+    """What #65 asked for. These two raised AttributeError, which cli.py does not catch, so
+    they reached the user as a traceback on both routes that read a parameter file."""
+    from scadbatch.cli import main
+
+    src = tmp_path / "p.json"
+    src.write_text(text)
+    if command == "json2csv":
+        argv = ["json2csv", str(src), str(tmp_path / "out.csv")]
+    else:
+        scad = tmp_path / "m.scad"
+        scad.write_text("cube(1);\n")
+        argv = ["export", str(scad), str(src), str(tmp_path / "out"), "--dry-run"]
+
+    code = main(argv)
+
+    captured = capsys.readouterr()
+    assert code == 1
+    assert "Traceback" not in captured.err
+    assert "p.json" in captured.err and "must be a JSON object" in captured.err
+
+
+def test_the_message_speaks_json_rather_than_python(tmp_path):
+    """The file is JSON and its format is OpenSCAD's Customizer; 'dict' and 'list' are
+    Python's words for things the user never wrote."""
+    src = tmp_path / "p.json"
+    src.write_text("[]\n")
+
+    message = str(pytest.raises(ValueError, read_json, src).value)
+
+    assert "dict" not in message and "list" not in message
