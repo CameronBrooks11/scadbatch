@@ -375,11 +375,11 @@ def test_an_overflowing_number_is_refused_as_out_of_range(tmp_path):
     assert "every set" not in message  # that claim belongs to the token case only
 
 
-def test_a_file_nested_deeper_than_the_recursion_limit_does_not_crash(tmp_path):
-    """json.loads parses deeper than a recursive walk can follow, and RecursionError is not a
-    ValueError, so the CLI showed a traceback rather than a message."""
+def test_a_modestly_nested_file_reads_everywhere(tmp_path):
+    """Shallow enough for every supported interpreter, so this says nothing about limits --
+    it is here so the two tests below cannot both pass by refusing everything."""
     src = write_json(
-        tmp_path, '{"parameterSets": {"s": {"v": ' + "[" * 2000 + "1" + "]" * 2000 + "}}}"
+        tmp_path, '{"parameterSets": {"s": {"v": ' + "[" * 100 + "1" + "]" * 100 + "}}}"
     )
 
     (read,) = read_json(src)
@@ -387,13 +387,31 @@ def test_a_file_nested_deeper_than_the_recursion_limit_does_not_crash(tmp_path):
     assert read["exported_filename"] == "s"
 
 
-def test_a_deeply_nested_token_is_still_found(tmp_path):
+def test_a_file_too_deep_for_this_interpreter_reports_rather_than_tracebacks(tmp_path):
+    """json.loads recurses per level and how far it gets depends on the version: 3.13 parses
+    2000 levels where 3.10 raises. RecursionError is not a ValueError, so the depth decided
+    whether the user got a message or a traceback. Asserting a depth parses is therefore an
+    assertion about the interpreter; what matters is that either way it is a message."""
     src = write_json(
-        tmp_path, '{"parameterSets": {"s": {"v": ' + "[" * 2000 + "NaN" + "]" * 2000 + "}}}"
+        tmp_path, '{"parameterSets": {"s": {"v": ' + "[" * 100_000 + "1" + "]" * 100_000 + "}}}"
     )
 
-    with pytest.raises(ValueError, match="NaN"):
+    with pytest.raises(ValueError, match="nests too deeply"):
         read_json(src)
+
+
+def test_the_walk_itself_handles_nesting_no_recursive_one_could(tmp_path):
+    """The walk, directly, past any plausible recursion limit -- built in Python because
+    json.loads cannot deliver a structure this deep on every version."""
+    document = {"parameterSets": {"s": {"v": None}}}
+    deep = [float("nan")]
+    for _ in range(10_000):
+        deep = [deep]
+    document["parameterSets"]["s"]["v"] = deep
+
+    found = _path_to_non_finite(document)
+
+    assert found is not None and found.startswith("parameterSets -> s -> v[0]")
 
 
 @pytest.mark.parametrize("value", ["0", "-1", "1e308", "1.5", '"NaN"', "true", "null"])

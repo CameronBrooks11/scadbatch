@@ -170,11 +170,21 @@ def read_json(json_path, encoding=DEFAULT_ENCODING):
             overflowed.append(text)
         return value
 
-    data = json.loads(
-        _read_text(json_path, encoding),
-        parse_constant=parse_constant,
-        parse_float=parse_float,
-    )
+    try:
+        data = json.loads(
+            _read_text(json_path, encoding),
+            parse_constant=parse_constant,
+            parse_float=parse_float,
+        )
+    except RecursionError as e:
+        # json.loads recurses per nesting level, and how deep it manages depends on the
+        # interpreter: 3.13 parses 2000 levels where 3.10 gives up. RecursionError is not a
+        # ValueError, so without this the depth decides whether the user gets a message or a
+        # traceback. _parse_vector reports its own limit the same way.
+        raise ValueError(
+            f"{json_path}: this file's JSON nests too deeply to read. A parameter value "
+            f"nested that far is not one OpenSCAD can use either."
+        ) from e
     if tokens or overflowed:
         where = _path_to_non_finite(data) or "a value"
         if tokens:
