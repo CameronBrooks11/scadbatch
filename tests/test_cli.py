@@ -1,8 +1,9 @@
 import os
+import re
 
 import pytest
 
-from scadbatch.cli import main
+from scadbatch.cli import main, parse_arguments
 
 
 @pytest.fixture
@@ -244,3 +245,52 @@ def test_gui_subcommand_reports_a_missing_tkinter(monkeypatch, capsys):
     assert code == 1
     assert "graphical interface is unavailable" in captured.err
     assert "tkinter" in captured.err and "python3-tk" in captured.err
+
+
+# OpenSCAD output formats, as names a help string might wrongly single out. Matched on word
+# boundaries so "offer" does not read as "off".
+_FORMAT_NAMES = ("stl", "off", "3mf", "amf", "png", "csg", "svg", "dxf", "pdf", "wrl")
+
+
+def _format_names_in(text):
+    return [f for f in _FORMAT_NAMES if re.search(rf"\b{re.escape(f)}\b", text, re.I)]
+
+
+def _help_for(argv):
+    with pytest.raises(SystemExit):
+        parse_arguments(argv)
+    return argv
+
+
+def test_general_help_does_not_single_out_one_output_format(capsys):
+    """The tool exports any format OpenSCAD can write, so its general help must not name one.
+
+    Pins the property rather than the wording: reword freely and this stays green, name a
+    format in the description or a subcommand's help and it goes red. The flags that own the
+    subject -- --format and --export-format -- are allowed to name formats, and do not appear
+    in the top-level help at all.
+    """
+    _help_for(["--help"])
+    top = capsys.readouterr().out
+
+    assert "export" in top, "help output did not render"
+    assert not _format_names_in(top), (
+        f"top-level --help names {_format_names_in(top)}; the tool is not limited to those"
+    )
+
+
+def test_export_positionals_do_not_single_out_one_output_format(capsys):
+    """Same property for `export --help`'s positionals, where the output folder is described.
+
+    Only the positional block is checked: --format and --export-format legitimately name
+    formats, and --format documents the default.
+    """
+    _help_for(["export", "--help"])
+    out = capsys.readouterr().out
+
+    _, _, rest = out.partition("positional arguments:")
+    positionals, _, _ = rest.partition("options:")
+    assert "output_folder" in positionals, "positional block not found in help output"
+    assert not _format_names_in(positionals), (
+        f"export --help positionals name {_format_names_in(positionals)}"
+    )

@@ -480,7 +480,7 @@ def batch_export(
     Args:
         scad_file (str): Path to the OpenSCAD (.scad) file.
         parameter_file (str): Path to the CSV or JSON file containing parameters.
-        output_folder (str): Directory where STL files will be saved.
+        output_folder (str): Directory where the exported files will be saved.
         openscad_path (str or None): Path to or name of the OpenSCAD executable; None to
             discover it (see :func:`scadbatch.engine.find_openscad`).
         export_format (str): Export format ('asciistl' or 'binstl').
