@@ -149,8 +149,9 @@ def read_json(json_path, encoding=DEFAULT_ENCODING):
             shaped like a parameter file -- a root that is not an object, a 'parameterSets'
             that is not an object, or a set that is not an object -- or holds a number
             OpenSCAD cannot use: a NaN or Infinity token anywhere in the document, or a
-            number literal that overflows. A root object with no 'parameterSets' key reads
-            as no parameter sets rather than raising.
+            number literal that overflows; or gives one name twice, at any level. A root
+            object with no 'parameterSets' key reads as no parameter sets rather than
+            raising.
     """
     # json.loads accepts two kinds of number OpenSCAD cannot use, and they need different
     # messages because the engine treats them differently. The hooks separate them: a literal
@@ -159,6 +160,20 @@ def read_json(json_path, encoding=DEFAULT_ENCODING):
     # JSON, which the engine parses and then cannot honour, dropping that one value.
     tokens = []
     overflowed = []
+    repeated = []
+
+    def object_pairs_hook(pairs):
+        # json.loads keeps the last of a repeated key. OpenSCAD's JSON reader preserves
+        # duplicates instead, and -P takes the first match, so a set named twice built the
+        # one we did not report -- measured on 2026.08.01: we read d = 11, it built d = 7.
+        # Within a set both take the last, so that case agrees; it is still a file saying two
+        # things about one parameter, and either way one of them is discarded in silence.
+        seen = {}
+        for key, value in pairs:
+            if key in seen:
+                repeated.append((seen, key))
+            seen[key] = value
+        return seen
 
     def parse_constant(token):
         tokens.append(token)
@@ -175,6 +190,7 @@ def read_json(json_path, encoding=DEFAULT_ENCODING):
             _read_text(json_path, encoding),
             parse_constant=parse_constant,
             parse_float=parse_float,
+            object_pairs_hook=object_pairs_hook,
         )
     except RecursionError as e:
         # json.loads recurses per nesting level, and how deep it manages depends on the
@@ -223,7 +239,57 @@ def read_json(json_path, encoding=DEFAULT_ENCODING):
         param_set = params.copy()
         param_set["exported_filename"] = name
         parameters.append(param_set)
+    if repeated:
+        raise ValueError(_repeated_name_error(json_path, data, repeated))
     return parameters
+
+
+def _repeated_name_error(json_path, data, repeated):
+    """Why a file that gives one name twice is refused, naming where the repeat is.
+
+    The hook sees each object as it completes, so an inner one is recorded first: a repeat
+    inside a set would be reported ahead of a repeated *set* name, which is the only level
+    where this reader and OpenSCAD disagree. Walking the document gives the level instead,
+    and the shallowest repeat is the one reported.
+    """
+    found = None
+    stack = [("", data)]
+    while stack:
+        path, value = stack.pop()
+        if any(value is obj for obj, _ in repeated):
+            key = next(k for obj, k in repeated if value is obj)
+            depth = -1 if not path else path.count(" -> ")
+            if found is None or depth < found[0]:
+                found = (depth, path, key)
+        if isinstance(value, dict):
+            for k, item in reversed(list(value.items())):
+                stack.append((f"{path} -> {k}" if path else str(k), item))
+        elif isinstance(value, list):
+            for index, item in reversed(list(enumerate(value))):
+                stack.append((f"{path}[{index}]", item))
+    if found is None:  # the object holding the repeat was itself a discarded duplicate
+        return (
+            f"{json_path}: a name is given twice in this file. A parameter file cannot state "
+            f"two values for one name, and only one of them survives being read."
+        )
+    _, path, key = found
+    parts = path.split(" -> ") if path else []
+    if path == "parameterSets":
+        what = f"parameter set {key!r} is named twice"
+        # the only level where the two readers choose differently
+        why = (
+            "This reader keeps the last of them and OpenSCAD selects the first, so the run "
+            "would report values it did not build."
+        )
+    else:
+        if len(parts) == 2 and parts[0] == "parameterSets":
+            what = f"parameter {key!r} is given twice in set {parts[1]!r}"
+        elif not parts:
+            what = f"{key!r} is given twice at the top level of the file"
+        else:
+            what = f"{key!r} is given twice in {path}"
+        why = "A parameter file cannot state two values for one name; only one survives."
+    return f"{json_path}: {what}. {why}"
 
 
 def _path_to_non_finite(data):
@@ -351,7 +417,8 @@ def read_parameters(parameter_file, encoding=DEFAULT_ENCODING):
     Raises:
         ValueError: If the file extension is not .csv or .json, the file is not text in
             that encoding, a CSV row does not have one cell per header column, or a JSON
-            file is not shaped like a parameter file or holds a number OpenSCAD cannot use.
+            file is not shaped like a parameter file, holds a number OpenSCAD cannot use, or
+            gives one name twice.
     """
     ext = os.path.splitext(str(parameter_file))[1].lower()
     if ext == ".csv":
