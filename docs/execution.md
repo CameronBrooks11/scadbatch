@@ -80,7 +80,10 @@ lines.
 
 ```json
 {
-  "openscad_batch_export": "2.0.0rc1",
+  "tool": {
+    "name": "scadbatch",
+    "version": "2.0.0rc1"
+  },
   "started_at": "2026-10-14T03:35:01+00:00",
   "openscad": {
     "path": "/usr/bin/openscad",
@@ -134,6 +137,9 @@ nothing is written.
 Recording the OpenSCAD path and version is the point of the `openscad` block: the same parameter
 file and the same model produce different geometry across OpenSCAD releases, so a result without
 the engine version is not reproducible.
+
+`tool.version` is read from the installed distribution's metadata, so it is `null` when scadbatch
+runs from a source tree rather than an install. `tool.name` is always there.
 
 ### counts.errors is not counts.failed
 

@@ -292,6 +292,10 @@ def test_warnings_and_echo_are_captured_into_the_json_summary(tmp_path):
     assert any(w.startswith("ECHO:") and '"size is", 5' in w for w in case["warnings"]), case
     assert any(w.startswith("WARNING:") and "undefined_thing" in w for w in case["warnings"]), case
     assert doc["openscad"]["version"] and doc["openscad"]["path"]
+    # Our own version resolves through importlib.metadata, so it is None whenever the
+    # distribution name it looks up stops matching the installed one. These tests run
+    # against a real install, which is the only place that mismatch is visible.
+    assert doc["tool"]["version"], doc["tool"]
     assert doc["inputs"]["scad_file"] == str(scad)
     assert case["command"][0] == doc["openscad"]["path"]
     assert "OpenSCAD warnings from 1 successful case(s):" in result.stdout

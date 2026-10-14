@@ -24,6 +24,12 @@ Everything here landed after `2.0.0rc1` and will ship in `2.0.0`.
 
 ### Changed — breaking
 
+- The `--summary` JSON records this tool under a `tool` block rather than under a key named
+  after the project. It was `"openscad_batch_export": "<version>"`, the pre-rename name from
+  before 2.0.0rc1, and is now `"tool": {"name": "scadbatch", "version": "<version>"}`. Keying by
+  role means a consumer reads which tool wrote the summary instead of having to know the key,
+  and a future rename cannot move it; it also matches the `openscad` sibling, already an object
+  with its own path and version. `2.0.0rc1` is the only release that wrote the old key. ([#90])
 - A blank or whitespace-only CSV cell now leaves that parameter unset, so the model's own
   default applies, instead of passing the empty string. OpenSCAD cannot read `""` as a number:
   it warns, falls back and still exits 0, so the previous behaviour built a model the row never
@@ -48,6 +54,10 @@ Everything here landed after `2.0.0rc1` and will ship in `2.0.0`.
   encoding change in 2.0.0rc1. ([#60])
 - `CONTRIBUTING.md`, `CODE_OF_CONDUCT.md`, `SUPPORT.md`, issue forms and a pull request
   template. ([#81])
+- This changelog, `CITATION.cff` for GitHub's citation button, and `docs/releasing.md`. ([#83])
+- `docs/parameters.md`, `docs/execution.md` and `docs/related-tools.md`, with the README
+  restructured around them: what the tool is, how to install it from PyPI, and one CLI and one
+  Python example, rather than a platform-specific install walkthrough. ([#85])
 
 ### Fixed
 
@@ -161,3 +171,6 @@ does not know.
 [#76]: https://github.com/CameronBrooks11/scadbatch/pull/76
 [#77]: https://github.com/CameronBrooks11/scadbatch/pull/77
 [#81]: https://github.com/CameronBrooks11/scadbatch/pull/81
+[#83]: https://github.com/CameronBrooks11/scadbatch/pull/83
+[#85]: https://github.com/CameronBrooks11/scadbatch/pull/85
+[#90]: https://github.com/CameronBrooks11/scadbatch/pull/90

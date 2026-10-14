@@ -57,8 +57,8 @@ body:
       label: scadbatch version
       description: >
         `pip show scadbatch` or `uv pip show scadbatch`, or the commit if you are running from
-        a checkout. There is no `--version` flag yet. A `--summary` file records it too, under
-        the key `openscad_batch_export`.
+        a checkout. There is no `--version` flag yet. A `--summary` file records it too, in its
+        `tool` block.
     validations:
       required: true
   - type: input

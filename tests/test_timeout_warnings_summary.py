@@ -157,7 +157,11 @@ def test_to_dict_records_engine_inputs_and_every_case(
     assert doc["dry_run"] is False
     assert doc["counts"] == {"ok": 1, "failed": 2, "timeout": 0, "skipped": 1, "errors": 0}
     assert doc["started_at"].endswith("+00:00")  # ISO 8601, UTC
-    assert "openscad_batch_export" in doc  # tool version (None when not installed)
+    # Keyed by role, with the name in the record: a consumer reads which tool wrote the
+    # summary rather than having to know the key. Version is None when not installed.
+    assert doc["tool"]["name"] == "scadbatch"
+    assert set(doc["tool"]) == {"name", "version"}
+    assert "openscad_batch_export" not in doc  # the pre-rename key is gone, not aliased
     statuses = [(r["name"], r["format"], r["status"]) for r in doc["results"]]
     assert statuses == [
         ("first", "stl", "ok"),
