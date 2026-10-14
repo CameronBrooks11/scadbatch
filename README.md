@@ -1,298 +1,172 @@
 # scadbatch
 
-This repository provides a tool to automate the export of STL models from OpenSCAD using CSV or JSON files of parameters. It offers a simple and user-friendly solution for batch exporting models with different parameter sets and includes a graphical user interface (GUI) for ease of use. Inspired by:
+Batch export models from parametric OpenSCAD designs using CSV or Customizer JSON parameter
+sets.
 
-[18107/OpenSCAD-batch-export-stl](https://github.com/18107/OpenSCAD-batch-export-stl)
+One `.scad` model plus a list of parameter sets gives you one output file per set — in any format
+OpenSCAD can write, several at a time, with a machine-readable record of what happened.
 
-[OutwardBuckle/OpenSCAD-Bulk-Export](https://github.com/OutwardBuckle/OpenSCAD-Bulk-Export)
+```
+scadbatch export model.scad params.csv out/
+```
 
-## Features
+No Python dependencies — just Python 3.10 or newer and OpenSCAD. The GUI additionally needs
+tkinter, which some Linux distributions package separately (`python3-tk` on Debian and Ubuntu);
+the standalone binaries bundle it.
 
-- Batch export STL, 3MF, OFF, PNG and any other format OpenSCAD can write, with parameters defined in CSV or JSON files.
-- Convert between CSV and JSON parameter files.
-- Easy-to-use command-line interface and GUI.
-- Handles boolean, numeric, and string parameter types correctly.
-- Supports advanced selection options for parameter sets.
-- Includes multiple example projects to get started.
-- Tested and validated on a number of test cases.
+## Install
 
-## Quick Start
+```
+pip install scadbatch
+```
 
-For easy usage, simply click on the **Releases** section on the right-hand side of the GitHub page and download the appropriate binary for your operating system (e.g., `.exe` for Windows, or equivalent for macOS and Linux). Install and start using the tool right away!
+Or download a standalone binary for Windows, macOS or Linux from
+[Releases](https://github.com/CameronBrooks11/scadbatch/releases) — no Python needed.
 
-## Requirements
+OpenSCAD itself is not bundled. Install it from [openscad.org](https://openscad.org/downloads.html)
+and either put it on `PATH`, set `$OPENSCAD`, or pass `--openscad-path`.
 
-- Python 3.10 or later.
-- OpenSCAD installed and added to your system PATH.
+## Quick start
 
-## Installation
+A parameter file, one row per model:
 
-### From Source
+```csv
+exported_filename,width,height,depth
+cube_small,10,10,10
+cube_medium,20,20,20
+cube_large,30,30,30
+```
 
-1. **Clone the repository:**
+Export every row:
 
-    ```
-    git clone https://github.com/CameronBrooks11/scadbatch.git
-    ```
+```
+scadbatch export examples/simpleCube/simpleCube.scad examples/simpleCube/simpleCube.csv out/
+```
 
-    ```
-    cd scadbatch
-    ```
+Three STLs in `out/`, named from the first column. A parameter the file does not mention keeps
+the default from the `.scad` file, so list only what varies.
 
-2. **Install the Python library:**
+To see the OpenSCAD command line for each case without running anything, add `--dry-run`.
 
-    ```
-    pip install .
-    ```
+### From Python
 
-3. **Ensure OpenSCAD is installed and accessible from the command line. Add it to your PATH if necessary.**
+```python
+from scadbatch import batch_export, detect_engine
 
-4. **If you encounter the following warning:**
+engine = detect_engine()
 
-    ```
-    WARNING: The script scadbatch.exe is installed in 'C:\Users\<YourUserName>\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_<somenumbers>\LocalCache\local-packages\Python311\Scripts' which is not on PATH.
-    Consider adding this directory to PATH or, if you prefer to suppress this warning, use --no-warn-script-location.
-    ```
+result = batch_export(
+    scad_file="examples/simpleCube/simpleCube.scad",
+    parameter_file="examples/simpleCube/simpleCube.csv",
+    output_folder="out",
+    openscad_path=engine.path,
+    export_format="binstl",
+    selection="0-1",
+    sequential=False,
+    formats=("stl",),
+    jobs=2,
+)
 
-    **You can resolve it by adding the directory returned by:**
+for r in result.results:
+    print(f"{r.name:14} {r.format}  ok={r.ok}  {r.duration:.2f}s  {r.output_path}")
 
-    ```
-    python -m site --user-base
-    ```
+print(f"failures={len(result.failures)} with_errors={len(result.with_errors)}")
+```
 
-    **Append the Scripts subdirectory of the output path to your system's PATH. For example:**
+```
+cube_small     stl  ok=True  0.03s  out/cube_small.stl
+cube_medium    stl  ok=True  0.03s  out/cube_medium.stl
+failures=0 with_errors=0
+```
 
-    ```
-    C:\Users\<YourUserName>\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_<somenumbers>\LocalCache\local-packages\Python311\Scripts
-    ```
+The library configures no logging handlers of its own, so add `logging.basicConfig()` to see the
+progress messages the CLI prints.
 
-5. **To modify the tool, reinstall it after making changes:**
-
-    ```
-    pip install --upgrade .
-    ```
-
-## Usage
-
-Once installed, the tool can be called from anywhere using the `scadbatch` command. (It was called `openscad-export` before; that name still works and will be removed after v2.0.) The tool provides three primary modes:
-
-1. **Export STL Files**
-2. **Convert CSV to JSON**
-3. **Convert JSON to CSV**
-
-### Using the GUI
-
-Launch the graphical interface for an intuitive way to configure and perform batch exports. Run the following command:
+### The GUI
 
 ```
 scadbatch gui
 ```
 
-From the GUI, you can:
+Select the `.scad` file, the parameter file and an output folder; set the format, a selection
+range and the parameter file's encoding; watch the log; and convert between CSV and JSON.
 
-- Select your `.scad` file, parameter file (CSV or JSON), and output folder.
-- Set the parameter file's encoding when it is not UTF-8 — leave the field blank for the default, or give a codec name such as `cp1252` for a spreadsheet export. One field serves the export and both conversions, which read different files, so each action names the encoding it used in the log. Files the tool writes are always UTF-8, whatever the field says.
-- Configure export settings like format, selection range, and sequential processing.
-- Monitor progress and view logs of the operation.
-- Convert between CSV and JSON parameter files.
+## Documentation
 
-### Using the CLI
+- **[docs/parameters.md](docs/parameters.md)** — the CSV and JSON formats, what a blank cell
+  means, how a cell becomes an OpenSCAD literal, how output files are named, and what is refused
+- **[docs/execution.md](docs/execution.md)** — parallelism, formats, timeouts, skipping existing
+  output, and the run summary JSON
+- **[docs/related-tools.md](docs/related-tools.md)** — the other tools that do this, what each is
+  good at, and when a shell loop is the right answer
 
-#### 1. Export STL Files
+## Commands
 
-Export STL files using either a CSV or JSON parameter file.
+| command | what it does |
+| --- | --- |
+| `scadbatch export <scad> <params> <out/>` | export one file per parameter set |
+| `scadbatch csv2json <csv> <json>` | CSV to a Customizer parameter-set file |
+| `scadbatch json2csv <json> <csv>` | and back |
+| `scadbatch gui` | the graphical interface |
 
-**Command Structure:**
+`scadbatch <command> --help` lists every flag. The ones worth knowing early:
 
-```
-scadbatch export <scad_file> <parameter_file> <output_folder> [--openscad-path PATH] [--format EXT ...] [--export-format asciistl|binstl] [--select SELECTION] [-j N] [--skip-existing | --overwrite] [--dry-run] [--timeout SECONDS] [--summary PATH.json] [--name-template TEMPLATE] [--encoding NAME]
-```
+| flag | |
+| --- | --- |
+| `--format EXT` | `stl`, `off`, `3mf`, `png`, `csg`, … Repeat for several at once |
+| `--select` | which sets to export: `0-5`, `1-3,7`, `every:2 in 0-10`, `from:5` |
+| `-j N`, `--jobs N` | how many OpenSCAD processes at once |
+| `--dry-run`, `-n` | print the commands, run nothing |
+| `--timeout SECONDS` | kill a case that hangs, keep the batch going |
+| `--summary run.json` | record the run for CI to assert against |
+| `--name-template` | e.g. `'{name}_d{diameter}'`, `'part_{index:03d}'` |
 
-**Parameters:**
+The conversions read values with the same rules the exporter uses, so a cell means the same
+thing either way. Converting to JSON is lossy for the types current OpenSCAD builds ignore in a
+parameter-set file: only a flat vector of numbers survives, so a vector of strings or booleans, a
+nested vector, a range and `undef` are each warned about by name. Export the CSV directly to
+apply those.
 
-- `<scad_file>`: Path to the OpenSCAD `.scad` file.
-- `<parameter_file>`: Path to the CSV or JSON file containing parameters. A JSON file is an OpenSCAD Customizer parameter-set file and is handed to OpenSCAD natively (`-p FILE -P SET`, OpenSCAD 2019.05+), so each value is typed by the model's own default and keys missing from a set keep the model's defaults; the CSV conventions below (quote-wrapping to force a string, `undef`) do not apply, OpenSCAD reads the values itself. CSV rows are passed as `-D` flags. A case never gets both.
-- `<output_folder>`: Directory where STL files will be saved.
+## Why this rather than a shell loop
 
-**Options:**
+For a few numeric parameters, a shell loop is fine, and
+[docs/related-tools.md](docs/related-tools.md) shows one. The reasons to reach for a tool are all
+the same reason: **OpenSCAD exits 0 when it does the wrong thing.**
 
-- `--openscad-path`: Path to the OpenSCAD executable. If omitted, `$OPENSCAD` is used, then `openscad` on PATH, then the platform's default install location (`C:\Program Files\OpenSCAD` on Windows, `/Applications/OpenSCAD.app` on macOS).
-- `--format EXT`: Output format by file extension, as OpenSCAD's `-o` accepts it (`stl`, `off`, `3mf`, `png`, `csg`, ... — a format the detected OpenSCAD does not advertise in its `--help` is warned about; one it really cannot write fails per case with OpenSCAD's own message). Repeat the flag to export every case in several formats. Defaults to `stl`.
-- `--export-format`: STL flavour, `asciistl` or `binstl`. Defaults to `binstl`. Only applies to `stl`.
-- `--camera`, `--imgsize`, `--colorscheme`: passed straight to OpenSCAD for `png` output, e.g. `--format png --imgsize 1024,768 --camera 0,0,0,55,0,25,140`. OpenSCAD 2021.01 needs a display to render PNG (`xvfb-run scadbatch ...` on a headless Linux box); current builds render offscreen.
-- `-j N`, `--jobs N`: run up to N OpenSCAD processes at once. Defaults to the number of CPUs. Ctrl-C stops the running renders and abandons the rest. (`--sequential` is a deprecated alias for `--jobs 1`.)
-- `--skip-existing`: leave a case alone when its output file already exists, and say so in the summary. The default (`--overwrite`) re-exports everything.
-- `-n`, `--dry-run`: print the OpenSCAD command for every case and run nothing; no files or folders are created.
-- `--timeout SECONDS`: kill a case that runs longer than this; it is recorded as timed out and the batch continues.
-- `--summary PATH.json`: write a machine-readable record of the run — OpenSCAD path and version, the inputs, and for every case its status (`ok`, `failed`, `timeout`, `skipped`, `dry-run`), return code, duration, OpenSCAD message lines (`WARNING:`, `ECHO:`, `ERROR:`, `EXPORT-WARNING:`, ...) and the exact command line, plus the tool version and a UTC timestamp. Written for failed and dry runs too, so CI can check it in; the directory is created if needed.
-  - *Gating on OpenSCAD's errors.* `counts.errors` is how many cases produced a stderr line beginning with one of OpenSCAD's error groups (`ERROR:`, `PARSER-ERROR:`, `UI-ERROR:`, `EXPORT-ERROR:`), whatever their status; each case also carries its own `errors` list. It exists because OpenSCAD exits 0 on several of them — a parameter set it could not open (every set then falls back to the model's defaults), a font it could not read — so a case can be reported `ok` with its geometry wrong. Which errors invalidate a model is not decided here, so the exit code still reflects failures only; gate on `counts.errors == 0` to refuse them.
-  - *What that gate does not cover.* It follows OpenSCAD's own taxonomy, which does not track whether the geometry is right. A missing `include` file, a missing `import()` and an unreadable `surface()` are all `WARNING:`, and each silently drops geometry — check `warnings` too if that matters. In the other direction, an `echo()` whose string contains a newline followed by `ERROR:` is counted, because groups are matched per stderr line. And `--skip-existing` leaves a kept file uninspected, so a re-run reports no errors for one that was produced with an error.
-- `--name-template TEMPLATE`: how to name output files (without extension). Fields: `{name}` (the Customizer set name or `exported_filename`, else `model_<index>`), `{index}`, and any parameter, e.g. `{name}_d{diameter}` or `part_{index:03d}`. Names are always made filesystem-safe (`lid/large` becomes `lid_large`; the original set name still goes to OpenSCAD), and two cases producing the same file name are refused before anything runs.
-- `--encoding NAME`: text encoding of the parameter file. Defaults to UTF-8, tolerating the byte-order mark Excel writes; pass e.g. `cp1252` for a spreadsheet export that is not UTF-8. Files this tool writes are always UTF-8.
-- `--select SELECTION`: Select specific parameter sets to export using indices and ranges. Format examples: `'0-5'`, `'1-3,7,10-12'`, `'2,4'`. Indices are zero-based.
+- A misspelled parameter is simply never used, so a typo in a column name gives you a full set of
+  outputs built at the defaults, exit 0, no message.
+- Reading a parameter set, a value it cannot convert to the parameter's declared type is ignored
+  and the default stands, silently.
+- `-D` takes an OpenSCAD expression, not a value, so `-D msg=hello` sets `msg` to undef.
+- Several `ERROR:` conditions — an unreadable parameter file, a font file it cannot read — print
+  an error and still exit 0. A missing font *family* prints nothing at all and substitutes.
 
-**Examples:**
+So parameter files that OpenSCAD would misread are refused up front, with a message naming the
+file and the place in it; values are serialised through one documented set of rules; and
+`--summary` records per-case status plus `counts.errors`, which counts cases that printed an
+error **whatever the exit status**, so CI has something to gate on.
 
-- **Export with CSV:**
+## Examples
 
-    ```
-    scadbatch export examples/simpleCube/simpleCube.scad examples/simpleCube/simpleCube.csv output
-    ```
+`examples/` has four projects, each with a `.scad`, a `.csv` and a `.json`:
 
-- **Selective Export:**
+| | |
+| --- | --- |
+| `simpleCube` | a cube in three sizes — the smallest thing that shows the idea |
+| `candleStand` | from the [OpenSCAD parametric examples](https://github.com/openscad/openscad/tree/master/examples/Parametric) |
+| `sign` | adjustable message, size and resolution, same source |
+| `gridfinity` | 189 parameter sets, and the one that shows the point at scale. Needs [gridfinity-rebuilt-openscad](https://github.com/kennetek/gridfinity-rebuilt-openscad) installed as an OpenSCAD library — see its own [README](examples/gridfinity/README.md) |
 
-    Export parameter sets from index 0 to 5:
+## Used by
 
-    ```
-    scadbatch export examples/candleStand/candleStand.scad examples/candleStand/candleStand.csv output --select "0-5"
-    ```
+Models and projects this has been used on:
 
-- **Export from JSON:**
-
-    Convert CSV to JSON first:
-
-    ```
-    scadbatch csv2json examples/simpleCube/simpleCube.csv examples/simpleCube/simpleCube.json
-    ```
-
-    Then, export using the JSON file:
-
-    ```
-    scadbatch export examples/simpleCube/simpleCube.scad examples/simpleCube/simpleCube.json output
-    ```
-
-#### 2. Convert CSV to JSON
-
-Convert a CSV parameter file to JSON format compatible with OpenSCAD's customizer.
-
-**Command Structure:**
-
-```
-scadbatch csv2json <csv_file> <json_file> [--encoding NAME]
-```
-
-Values are read with the same rules the exporter uses, so a cell means the same thing either way. A vector is stored as an OpenSCAD literal in a string, because OpenSCAD ignores a JSON array; nested vectors, ranges and `undef` are warned about, since current OpenSCAD builds ignore those in a parameter-set file and keep the model's default (export the CSV directly to apply them).
-
-**Example:**
-
-```
-scadbatch csv2json examples/candleStand/candleStand.csv examples/candleStand/candleStand.json
-```
-
-#### 3. Convert JSON to CSV
-
-Convert a JSON parameter file back to CSV format.
-
-**Command Structure:**
-
-```
-scadbatch json2csv <json_file> <csv_file> [--encoding NAME]
-```
-
-**Example:**
-
-```
-scadbatch json2csv examples/sign/sign.json examples/sign/sign_converted.csv
-```
-
-## CSV File Structure
-
-- The CSV file should have a header row with parameter names.
-- Each subsequent row defines a set of parameters for the OpenSCAD model, with one cell per header column. A row with more or fewer cells is rejected by line number, rather than guessed at.
-- A cell with nothing in it — empty, or only whitespace — leaves that parameter out of the row, so the model's own default applies. This is how one row sets a parameter and another does not, and it matches the engine: OpenSCAD types each parameter-set value by the model's declared default and silently ignores one it cannot convert, so `""` against a numeric parameter leaves the default standing. The `-D` flags a CSV row becomes are typed by the literal instead, where `""` reaches a number as a string and OpenSCAD warns, falls back and still exits 0 — a model you did not ask for, with nothing failing. Leaving the flag out is the only way to get the engine's own behaviour here.
-- Each row says in the log which parameters it leaves unset, because OpenSCAD does not: a column nobody filled would otherwise export a whole batch at the defaults with nothing to show for it.
-- To set a parameter *to* the empty string, give a cell whose text is `""` — six quote characters in raw CSV, since `""` alone is just how CSV quotes an empty field and reads back identically to a bare comma. Note OpenSCAD honours an empty string only where the model's default is itself a string.
-- An `exported_filename` column names the output files; without it files are named `model_<index>`, or use `--name-template`. Names are made filesystem-safe automatically, and two rows may not share a name.
-- Files are read as UTF-8 (a byte-order mark is tolerated) and written as UTF-8. For a spreadsheet export in another encoding, pass `--encoding` or fill in the GUI's Parameter File Encoding field; note that Excel's "Unicode text" export is UTF-16 **and tab-separated**, which this tool does not read — save as "CSV UTF-8" instead.
-
-**Example CSV file (`simpleCube.csv`):**
-
-| exported_filename | depth | height | width |
-|-------------------|-------|--------|-------|
-| cube_small        | 10    | 10     | 10    |
-| cube_medium       | 20    | 20     | 20    |
-| cube_large        | 30    | 30     | 30    |
-
-## JSON File Structure
-
-The JSON file should follow the structure used by OpenSCAD's customizer profiles. It should contain a `parameterSets` object, where each key is the `exported_filename` and its value is a JSON object of parameters.
-
-What is refused, and why, since all of it reads as valid JSON to most tools:
-
-- A root that is not an object, a `parameterSets` that is not an object, or a set that is not an object. Each names the level and what was found there. A root object with no `parameterSets` key is fine and reads as no parameter sets, because OpenSCAD accepts that too.
-- `NaN`, `Infinity` or `-Infinity` anywhere in the file. These are not JSON, and OpenSCAD's reader refuses the whole document over one — so every set in the file would export at the model's defaults.
-- A number literal that overflows, such as `1e999`. That is valid JSON, and OpenSCAD parses the file and then cannot use the value, so that one parameter would fall back to its default.
-- The same name given twice at any level. Only one of the two survives being read, so the file does not describe one thing. For a repeated *set* name it also matters which reader you ask: this tool keeps the last and OpenSCAD selects the first, so a run would report values it did not build. The CSV side refuses two rows sharing a name for the same reason.
-- JSON nested too deeply for Python's reader to parse.
-
-**Example JSON file (`simpleCube.json`):**
-
-```
-{
-    "parameterSets": {
-        "cube_small": {
-            "width": "10",
-            "height": "10",
-            "depth": "10"
-        },
-        "cube_medium": {
-            "width": "20",
-            "height": "20",
-            "depth": "20"
-        },
-        "cube_large": {
-            "width": "30",
-            "height": "30",
-            "depth": "30"
-        }
-    },
-    "fileFormatVersion": "1"
-}
-```
-
-## OpenSCAD File Structure
-
-The OpenSCAD file must define a model that uses parameters from the parameter file. For example:
-
-**Example OpenSCAD file (`simpleCube.scad`):**
-
-```
-module model() { cube([width, height, depth]); }
-```
-
-## Example Files
-
-The `examples/` directory contains multiple projects demonstrating how to use the exporter with different OpenSCAD models.
-
-### 1. Simple Cube
-
-A basic example of a customizable cube with varying dimensions.
-
-**Files:**
-
-- `examples/simpleCube/simpleCube.scad`
-- `examples/simpleCube/simpleCube.csv`
-- `examples/simpleCube/simpleCube.json`
-
-### 2. Candle Stand
-
-A more complex model featuring a candle stand with options for customization from the [OpenSCAD Parametric Examples](https://github.com/openscad/openscad/tree/master/examples/Parametric).
-
-**Files:**
-
-- `examples/candleStand/candleStand.scad`
-- `examples/candleStand/candleStand.csv`
-- `examples/candleStand/candleStand.json`
-
-### 3. Sign
-
-A customizable sign with adjustable message, size, and resolution parameters from the [OpenSCAD Parametric Examples](https://github.com/openscad/openscad/tree/master/examples/Parametric).
-
-**Files:**
-
-- `examples/sign/sign.scad`
-- `examples/sign/sign.csv`
-- `examples/sign/sign.json`
+- **[SnapTessSCAD](https://github.com/uwo-fast/SnapTessSCAD)**
+- **[Open Source Nasopharyngeal Swab and UV Curing System](https://github.com/uwo-fast/OpenNasopharyngealSwab)** —
+  [HardwareX paper](https://www.hardware-x.com/article/S2468-0672(20)30044-4/fulltext)
+- **[Customizable Christmas Name Ornament](https://github.com/CameronBrooks11/ChristmasNameOrnament/)** —
+  after [the original by Lyl3](https://www.thingiverse.com/thing:4681765)
+- the `candleStand` and `sign` parametric examples above
 
 ## Contributing and support
 
@@ -309,6 +183,14 @@ Contributions are welcome, and a bug report with a reproduction is as useful as 
 [CITATION.cff](CITATION.cff) carries the metadata GitHub's "Cite this repository" button reads.
 A DOI will be added once a release is archived on Zenodo.
 
+## Prior art
+
+This started as a Python port of
+[OutwardBuckle/OpenSCAD-Bulk-Export](https://github.com/OutwardBuckle/OpenSCAD-Bulk-Export), and
+also took ideas from
+[18107/OpenSCAD-batch-export-stl](https://github.com/18107/OpenSCAD-batch-export-stl).
+[docs/related-tools.md](docs/related-tools.md) says what each does and when to prefer it.
+
 ## License
 
-This project is licensed under the AGPL v3 License. See the LICENSE file for details.
+AGPL v3. See [LICENSE](LICENSE).
