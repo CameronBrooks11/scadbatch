@@ -7,15 +7,13 @@ Notable changes to scadbatch. The format follows
 Entries are reconstructed from the merged pull requests, which are linked so the reasoning and
 the measurements behind each change stay reachable.
 
-Not every commit appears here. `v1.1.0..main` is 81 commits, of which 36 are squashed pull
-requests; the other 45 are direct pushes, almost all paper revisions, figures and examples from
-November and December 2024, including the automated `(auto) Paper PDF Draft` commits. None of
-them changes the tool.
+Not every commit appears here. The test is user-visibility: a change is listed when it affects
+behaviour, output, or what the tool accepts.
 
-Of the 36 pull requests, seven are left out because nothing about them is visible to someone
-using the tool: dependency pin bumps (#1, #2, #47), the version bump that cut 2.0.0rc1 (#52),
-the paper-draft workflow (#38), and the two fixes to the release workflow's own frozen-GUI
-self-check (#53, #54). The release workflow itself is listed, under 2.0.0rc1, because what it
+Left out are dependency pin bumps (#1, #2, #47), the version bump that cut 2.0.0rc1 (#52),
+changes to the CI workflows and the contributor tooling (#38, #53, #54, #92), and the direct
+pushes from the 2024 paper work — figures, examples and the automated paper-draft commits —
+which predate the rewrite. The release workflow is listed, under 2.0.0rc1, because what it
 produces is something a user gets.
 
 ## [Unreleased]
@@ -55,10 +53,6 @@ Everything here landed after `2.0.0rc1` and will ship in `2.0.0`.
 - `CONTRIBUTING.md`, `CODE_OF_CONDUCT.md`, `SUPPORT.md`, issue forms and a pull request
   template. ([#81])
 - This changelog, `CITATION.cff` for GitHub's citation button, and `docs/releasing.md`. ([#83])
-- The pre-commit hooks are now enforced. The config had been in the repository since 2.0.0rc1
-  with nothing installing or running it, so its checks — trailing whitespace, end-of-file
-  newlines, YAML syntax, stray conflict markers — had never fired. `just hooks` installs them
-  locally, and CI runs them on every pull request whether or not anyone did. ([#92])
 - `docs/parameters.md`, `docs/execution.md` and `docs/related-tools.md`, with the README
   restructured around them: what the tool is, how to install it from PyPI, and one CLI and one
   Python example, rather than a platform-specific install walkthrough. ([#85])
@@ -178,4 +172,3 @@ does not know.
 [#83]: https://github.com/CameronBrooks11/scadbatch/pull/83
 [#85]: https://github.com/CameronBrooks11/scadbatch/pull/85
 [#90]: https://github.com/CameronBrooks11/scadbatch/pull/90
-[#92]: https://github.com/CameronBrooks11/scadbatch/pull/92
