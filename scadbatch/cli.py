@@ -1,7 +1,7 @@
 """Command-line interface.
 
 Available subcommands:
-- export: Batch export models, one file per parameter set.
+- export: Batch export models from CSV or Customizer JSON parameter sets.
 - csv2json: Convert CSV parameter files to JSON.
 - json2csv: Convert JSON parameter files to CSV.
 - gui: Launch the graphical user interface."""
@@ -44,7 +44,7 @@ def parse_arguments(argv=None):
     # Export subcommand
     export_parser = subparsers.add_parser(
         "export",
-        help="Export one file per parameter set, in any format OpenSCAD can write.",
+        help="Export each parameter set, in any format OpenSCAD can write.",
     )
     export_parser.add_argument("scad_file", help="Path to the OpenSCAD (.scad) file.")
     export_parser.add_argument(

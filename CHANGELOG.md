@@ -42,6 +42,14 @@ Everything here landed after `2.0.0rc1` and will ship in `2.0.0`.
     and OpenSCAD selects the first, so a run reported values it did not build ([#77])
   - a CSV row whose cell count does not match the header ([#55])
 
+### Changed
+
+- `--help` no longer describes the tool as an STL exporter. #36 made the output format
+  arbitrary, but the top-level description, the `export` subcommand's help and the
+  `output_folder` text all still said STL, which contradicted the README. The wording now names
+  no format, so it cannot go stale the same way; `--format`'s own help still states that the
+  default is `stl`. ([#94])
+
 ### Added
 
 - `counts.errors` in the `--summary` JSON, and an `errors` list per case: the number of cases
@@ -172,3 +180,4 @@ does not know.
 [#83]: https://github.com/CameronBrooks11/scadbatch/pull/83
 [#85]: https://github.com/CameronBrooks11/scadbatch/pull/85
 [#90]: https://github.com/CameronBrooks11/scadbatch/pull/90
+[#94]: https://github.com/CameronBrooks11/scadbatch/pull/94
