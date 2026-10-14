@@ -25,8 +25,8 @@ round trip. That means:
 
 Check the [README](README.md) for the CSV and JSON rules: several things that look like bugs are
 deliberate refusals, and the message usually names the file and line. If a run exits 0 but the
-geometry is wrong, look at the `--summary` JSON — `counts.errors` reports errors OpenSCAD itself
-exits 0 on.
+geometry is wrong, look at the `--summary` JSON: `counts.errors` is the number of cases OpenSCAD
+printed an error for, including cases it exited 0 on.
 
 Search the existing issues, including closed ones. A few known limits are recorded there with
 measurements rather than fixed.

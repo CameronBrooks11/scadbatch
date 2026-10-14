@@ -21,8 +21,9 @@ point `$OPENSCAD` at the binary:
 OPENSCAD=/path/to/openscad just test
 ```
 
-Without one, the integration tests skip and say so; the rest of the suite still runs. CI tests
-against both a stable and a nightly OpenSCAD, because the two disagree about enough to matter.
+Without one, the integration tests skip and the rest of the suite still runs — `pytest -rs`
+prints the reason, which `just test` does not. CI tests against both a stable and a nightly
+OpenSCAD, because the two disagree about enough to matter.
 
 ## Before you open a pull request
 
@@ -31,7 +32,11 @@ just check && just test
 ```
 
 `just check` is what CI runs: formatting and lint, non-mutating. `just fmt` fixes formatting
-locally. Do not bypass pre-commit hooks or skip CI.
+locally. Do not skip CI.
+
+There is a `.pre-commit-config.yaml` in the repo, but nothing installs or runs it — it is not
+in the dev dependencies, the justfile or any workflow, so a fresh clone has no hooks. `just
+check && just test` is the gate that is actually enforced (#82).
 
 ## How changes are organised
 
@@ -51,12 +56,13 @@ locally. Do not bypass pre-commit hooks or skip CI.
 ```
 fix(params): reject a CSV row that does not match the header
 feat(runner): count and report the errors OpenSCAD exits 0 on
-docs: record the release procedure
+docs: say what counts.errors does not cover
 ```
 
 Imperative mood, lowercase, no trailing period, subject under 72 characters. Put the reasoning
 in the body, separated by a blank line, and reference issue numbers there rather than in the
-subject.
+subject. The `(#NN)` on every subject in `git log` is the pull request number, which GitHub
+appends when it squashes; you do not write it.
 
 ## Tests
 

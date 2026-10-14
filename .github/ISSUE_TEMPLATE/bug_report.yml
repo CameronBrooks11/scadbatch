@@ -10,8 +10,8 @@ body:
         you can send.
 
         Note that several refusals are deliberate — a ragged CSV row, a repeated name, a
-        non-finite number — and the message names the file and line. The README's CSV and JSON
-        sections list them.
+        non-finite number — and the message names the file, and the line or the path within
+        it. The README's CSV and JSON sections list them.
   - type: textarea
     id: what-happened
     attributes:
@@ -33,7 +33,7 @@ body:
     attributes:
       label: The .scad file
       description: The smallest model that still shows it. Paste it rather than attaching.
-      render: scad
+      render: openscad
     validations:
       required: false
   - type: textarea
@@ -57,7 +57,8 @@ body:
       label: scadbatch version
       description: >
         `pip show scadbatch` or `uv pip show scadbatch`, or the commit if you are running from
-        a checkout. There is no `--version` flag yet; a `--summary` file also records it.
+        a checkout. There is no `--version` flag yet. A `--summary` file records it too, under
+        the key `openscad_batch_export`.
     validations:
       required: true
   - type: input
@@ -73,8 +74,8 @@ body:
       label: The run summary, if you have one
       description: >
         `--summary run.json` records the engine, the inputs and every case. `counts.errors`
-        reports errors OpenSCAD exits 0 on, which is often the whole story when a run looks
-        successful but the geometry is wrong.
+        is the number of cases OpenSCAD printed an error for, including cases it exited 0 on —
+        often the whole story when a run looks successful but the geometry is wrong.
       render: json
     validations:
       required: false
