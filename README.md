@@ -217,6 +217,14 @@ scadbatch json2csv examples/sign/sign.json examples/sign/sign_converted.csv
 
 The JSON file should follow the structure used by OpenSCAD's customizer profiles. It should contain a `parameterSets` object, where each key is the `exported_filename` and its value is a JSON object of parameters.
 
+What is refused, and why, since all of it reads as valid JSON to most tools:
+
+- A root that is not an object, a `parameterSets` that is not an object, or a set that is not an object. Each names the level and what was found there. A root object with no `parameterSets` key is fine and reads as no parameter sets, because OpenSCAD accepts that too.
+- `NaN`, `Infinity` or `-Infinity` anywhere in the file. These are not JSON, and OpenSCAD's reader refuses the whole document over one — so every set in the file would export at the model's defaults.
+- A number literal that overflows, such as `1e999`. That is valid JSON, and OpenSCAD parses the file and then cannot use the value, so that one parameter would fall back to its default.
+- The same name given twice at any level. Only one of the two survives being read, so the file does not describe one thing. For a repeated *set* name it also matters which reader you ask: this tool keeps the last and OpenSCAD selects the first, so a run would report values it did not build. The CSV side refuses two rows sharing a name for the same reason.
+- JSON nested too deeply for Python's reader to parse.
+
 **Example JSON file (`simpleCube.json`):**
 
 ```

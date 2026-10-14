@@ -230,8 +230,12 @@ def test_a_file_with_no_sets_to_read_is_not_an_error(tmp_path, text):
 
 @pytest.mark.parametrize(
     "text",
-    ['{"parameterSets": []}', '{"parameterSets": {"lid": "nope"}}'],
-    ids=["parameterSets-not-an-object", "set-not-an-object"],
+    [
+        '{"parameterSets": []}',
+        '{"parameterSets": {"lid": "nope"}}',
+        '{"parameterSets": 5, "a": 1, "a": 2}',
+    ],
+    ids=["parameterSets-not-an-object", "set-not-an-object", "bad-shape-with-a-duplicate"],
 )
 @pytest.mark.parametrize("command", ["json2csv", "export"])
 def test_the_cli_reports_a_bad_shape_without_a_traceback(
@@ -455,6 +459,70 @@ def test_a_parameter_named_twice_in_one_set_is_refused(tmp_path):
         read_json(src)
 
 
+def test_a_repeat_whose_name_matches_a_set_is_not_called_a_repeated_set(tmp_path):
+    """The level has to come from where the repeat is, not from whether its name happens to
+    be a set name. Asking "is this name a key of parameterSets?" called both of these a
+    repeated set, and sent the reader looking for two 'a' keys that are not there."""
+    inside = write_json(tmp_path, '{"parameterSets": {"b": {"a": 7, "a": 11}, "a": {"d": 1}}}')
+    at_root = tmp_path / "root.json"
+    at_root.write_text('{"parameterSets": {"a": {"d": 1}}, "a": 1, "a": 2}')
+
+    with pytest.raises(ValueError, match=r"parameter 'a' is given twice in set 'b'"):
+        read_json(inside)
+    with pytest.raises(ValueError, match=r"'a' is given twice at the top level"):
+        read_json(at_root)
+
+
+def test_a_repeated_set_name_is_reported_ahead_of_a_repeat_inside_a_set(tmp_path):
+    """The hook sees each object as it completes, so the inner repeat is recorded first.
+    Reporting that one hid the set-level case, which is the only one where this reader and
+    OpenSCAD build different things."""
+    src = write_json(tmp_path, '{"parameterSets": {"a": {"d": 7, "d": 8}, "a": {"d": 9}}}')
+
+    with pytest.raises(ValueError, match=r"parameter set 'a' is named twice"):
+        read_json(src)
+
+
+def test_the_shallowest_repeat_is_the_one_reported(tmp_path):
+    """Both containers here survive the parse, so which one is reported is a live choice --
+    unlike the case above, where the first 'a' object is discarded by the repeat itself and
+    only one candidate is ever left. The root repeat is the outer fact about the file."""
+    src = write_json(tmp_path, '{"parameterSets": {"a": {"d": 7, "d": 8}}, "v": 1, "v": 2}')
+
+    with pytest.raises(ValueError, match=r"'v' is given twice at the top level"):
+        read_json(src)
+
+
+def test_the_repeat_is_located_by_identity_not_by_equality(tmp_path):
+    """Once the repeat is collapsed, set 'a' is {"d": 8} -- equal to set 'b'. Comparing by
+    equality while walking finds whichever comes first and can name the wrong set."""
+    src = write_json(tmp_path, '{"parameterSets": {"a": {"d": 7, "d": 8}, "b": {"d": 8}}}')
+
+    with pytest.raises(ValueError, match=r"parameter 'd' is given twice in set 'a'"):
+        read_json(src)
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        '{"parameterSets": 5, "a": 1, "a": 2}',
+        '{"parameterSets": "abc", "a": 1, "a": 2}',
+        '{"parameterSets": true, "a": 1, "a": 2}',
+    ],
+    ids=["number", "string", "boolean"],
+)
+def test_a_bad_shape_is_reported_before_a_duplicate_is_looked_for(tmp_path, text):
+    """Looking for the duplicate's level first meant probing data['parameterSets'] with `in`
+    before anything had established it was a container: a scalar there raised TypeError, which
+    the export handler does not catch, so it reached the user as a traceback -- the defect #69
+    fixed. A string was worse than a crash: 'a' in 'abc' is substring membership, so it was
+    reported as a repeated set name."""
+    src = write_json(tmp_path, text)
+
+    with pytest.raises(ValueError, match="must be a JSON object naming each set"):
+        read_json(src)
+
+
 def test_the_same_name_in_two_different_sets_is_fine(tmp_path):
     """Two sets may of course set the same parameter; only a repeat within one object is a
     second instruction for the same thing."""
@@ -466,7 +534,10 @@ def test_the_same_name_in_two_different_sets_is_fine(tmp_path):
 
 
 def test_a_duplicate_outside_parameterSets_is_refused_too(tmp_path):
-    """OpenSCAD reads the document, so an ambiguous key anywhere makes the file ambiguous."""
+    """Not because the engine objects: measured against 2026.08.01, a file with
+    fileFormatVersion twice builds normally and silently, with the right value. It is refused
+    because only one of the two survives being read, so the file does not describe one thing
+    -- the same reason as a repeat inside a set, where the engine also agrees with us."""
     src = write_json(
         tmp_path,
         '{"parameterSets": {"a": {"d": 7}}, "fileFormatVersion": "1", "fileFormatVersion": "2"}',
