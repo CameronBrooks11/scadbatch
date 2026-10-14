@@ -29,6 +29,10 @@ from scadbatch.params import (
 
 log = logging.getLogger("scadbatch")
 
+# The distribution name, used both to look up our own version and to record it in a run
+# summary. One literal, so a rename cannot leave the two disagreeing.
+_TOOL_NAME = "scadbatch"
+
 
 class _ActiveProcesses:
     """OpenSCAD processes currently running, so an interrupt can terminate them.
@@ -156,7 +160,9 @@ class BatchResult:
     def to_dict(self):
         """JSON-serialisable record of the whole batch: engine, inputs, per-case results."""
         return {
-            "openscad_batch_export": _tool_version(),
+            # Keyed by role, not by the tool's own name: a consumer reads the name from
+            # the record rather than having to know it, and a rename cannot move the key.
+            "tool": {"name": _TOOL_NAME, "version": _tool_version()},
             "started_at": self.started_at,
             "openscad": None
             if self.engine is None
@@ -435,7 +441,7 @@ def _reject_duplicate_names(names):
 
 def _tool_version():
     try:
-        return metadata.version("scadbatch")
+        return metadata.version(_TOOL_NAME)
     except metadata.PackageNotFoundError:
         return None
 

@@ -80,7 +80,10 @@ lines.
 
 ```json
 {
-  "openscad_batch_export": "2.0.0rc1",
+  "tool": {
+    "name": "scadbatch",
+    "version": "2.0.0rc1"
+  },
   "started_at": "2026-10-14T03:35:01+00:00",
   "openscad": {
     "path": "/usr/bin/openscad",
