@@ -88,7 +88,7 @@ Each message names the file and the place in it.
 | the file has | why it is refused |
 | --- | --- |
 | a root, `parameterSets`, or a set that is not an object | there is nothing to read as parameter sets; this previously raised `AttributeError` from inside the reader and reached you as a traceback |
-| `NaN`, `Infinity` or `-Infinity` anywhere | OpenSCAD's JSON reader rejects the whole document, so **every** set exported at the model's defaults, exit code 0, no warning |
+| `NaN`, `Infinity` or `-Infinity` anywhere | OpenSCAD's JSON reader rejects the whole document, so **every** set exported at the model's defaults, exit code 0 — loud but not fatal: `ERROR: Cannot open Parameter Set 'p.json': <unspecified file>(1): expected value`, which `set -e` will not catch |
 | a number too large for a double | it parses, then cannot be used |
 | the same name twice at any level | for a duplicated *set* name, this tool kept the last and OpenSCAD selects the first, so the run reported values it did not build |
 
@@ -110,7 +110,7 @@ openscad -o out/cube_small.stl --export-format=binstl \
 OpenSCAD reads the set itself, so **the model's declared default fixes each parameter's type**.
 A value that cannot convert to that type is ignored and the default stands.
 
-**CSV becomes `-D` flags**, one per parameter, in sorted order:
+**CSV becomes `-D` flags**, one per parameter, in the order the columns appear:
 
 ```
 openscad -o out/cube_small.stl --export-format=binstl \
@@ -164,10 +164,10 @@ A template may use `{name}`, `{index}`, and any parameter in the set:
 
 A parameter the row leaves unset renders empty rather than failing the batch.
 
-Every name is made filesystem-safe — `a/b c:d*` becomes `a_b c_d_`, so separators and
-shell-significant characters cannot escape the output directory, while spaces are left alone. If
-two cases would produce the same file, the run is refused rather than letting one silently
-overwrite the other.
+Every name is made filesystem-safe — `a/b c:d*` becomes `a_b c_d_`, and `../escape` becomes
+`_escape`, so a set name cannot direct output outside the folder you chose. Spaces are left
+alone. If two cases would produce the same file, the run is refused rather than letting one
+silently overwrite the other.
 
 ## Selecting a subset
 

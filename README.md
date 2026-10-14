@@ -10,7 +10,9 @@ OpenSCAD can write, several at a time, with a machine-readable record of what ha
 scadbatch export model.scad params.csv out/
 ```
 
-No runtime dependencies beyond Python 3.10 and OpenSCAD.
+No Python dependencies — just Python 3.10 or newer and OpenSCAD. The GUI additionally needs
+tkinter, which some Linux distributions package separately (`python3-tk` on Debian and Ubuntu);
+the standalone binaries bundle it.
 
 ## Install
 
@@ -120,9 +122,10 @@ range and the parameter file's encoding; watch the log; and convert between CSV 
 | `--name-template` | e.g. `'{name}_d{diameter}'`, `'part_{index:03d}'` |
 
 The conversions read values with the same rules the exporter uses, so a cell means the same
-thing either way. Converting to JSON is lossy for a few types that current OpenSCAD builds
-ignore in a parameter-set file — nested vectors, ranges and `undef` — and each is warned about;
-export the CSV directly to apply those.
+thing either way. Converting to JSON is lossy for the types current OpenSCAD builds ignore in a
+parameter-set file: only a flat vector of numbers survives, so a vector of strings or booleans, a
+nested vector, a range and `undef` are each warned about by name. Export the CSV directly to
+apply those.
 
 ## Why this rather than a shell loop
 
@@ -130,11 +133,13 @@ For a few numeric parameters, a shell loop is fine, and
 [docs/related-tools.md](docs/related-tools.md) shows one. The reasons to reach for a tool are all
 the same reason: **OpenSCAD exits 0 when it does the wrong thing.**
 
-- A value it cannot convert to the parameter's declared type is ignored, leaving the default, with
-  no warning. A typo in a column name gives you a full set of outputs built at the defaults.
+- A misspelled parameter is simply never used, so a typo in a column name gives you a full set of
+  outputs built at the defaults, exit 0, no message.
+- Reading a parameter set, a value it cannot convert to the parameter's declared type is ignored
+  and the default stands, silently.
 - `-D` takes an OpenSCAD expression, not a value, so `-D msg=hello` sets `msg` to undef.
-- Several `ERROR:` conditions — an unreadable parameter file, a missing font — print an error and
-  still exit 0.
+- Several `ERROR:` conditions — an unreadable parameter file, a font file it cannot read — print
+  an error and still exit 0. A missing font *family* prints nothing at all and substitutes.
 
 So parameter files that OpenSCAD would misread are refused up front, with a message naming the
 file and the place in it; values are serialised through one documented set of rules; and
@@ -143,13 +148,14 @@ error **whatever the exit status**, so CI has something to gate on.
 
 ## Examples
 
-`examples/` has three projects, each with a `.scad`, a `.csv` and a `.json`:
+`examples/` has four projects, each with a `.scad`, a `.csv` and a `.json`:
 
 | | |
 | --- | --- |
 | `simpleCube` | a cube in three sizes — the smallest thing that shows the idea |
 | `candleStand` | from the [OpenSCAD parametric examples](https://github.com/openscad/openscad/tree/master/examples/Parametric) |
 | `sign` | adjustable message, size and resolution, same source |
+| `gridfinity` | 189 parameter sets, and the one that shows the point at scale. Needs [gridfinity-rebuilt-openscad](https://github.com/kennetek/gridfinity-rebuilt-openscad) installed as an OpenSCAD library — see its own [README](examples/gridfinity/README.md) |
 
 ## Used by
 

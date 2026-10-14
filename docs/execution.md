@@ -1,7 +1,7 @@
 # Running a batch
 
-One OpenSCAD process is started per parameter set. This page covers how many run at once, what
-happens when one misbehaves, and what the run records about itself.
+One OpenSCAD process is started per parameter set per output format. This page covers how many
+run at once, what happens when one misbehaves, and what the run records about itself.
 
 ## Parallelism
 
@@ -116,14 +116,20 @@ lines.
       "stderr": "",
       "warnings": [],
       "errors": [],
-      "command": ["openscad", "-o", "out/cube_small.stl", "--export-format=binstl",
+      "command": ["openscad", "-o", "out/.cube_small.part.stl", "--export-format=binstl",
                   "-Ddepth=10", "-Dheight=10", "-Dwidth=10", "simpleCube.scad"]
     }
   ]
 }
 ```
 
-That is a real summary with the long paths shortened and the second case removed for length.
+That is a real summary, with the long absolute paths shortened, the durations rounded and the
+second case removed for length.
+
+The `-o` in `command` is a `.part` sibling of the output, not the output itself: each case writes
+to `.<name>.part.<ext>` and is renamed on success, so an interrupted or failed run never leaves a
+truncated file where a finished one should be. A dry-run summary records the final path, since
+nothing is written.
 
 Recording the OpenSCAD path and version is the point of the `openscad` block: the same parameter
 file and the same model produce different geometry across OpenSCAD releases, so a result without
@@ -131,13 +137,17 @@ the engine version is not reproducible.
 
 ### counts.errors is not counts.failed
 
-`status` is one of `ok`, `failed`, `timeout` or `skipped`, and `counts` tallies them.
+`status` is one of `ok`, `failed`, `timeout`, `skipped`, or `dry-run` under `--dry-run`, and
+`counts` tallies the first four.
 `counts.errors` is **separate**, and counts something the others cannot see: cases where
 OpenSCAD printed an error line **whatever its exit status**.
 
-OpenSCAD exits 0 on several `ERROR:` conditions — a parameter file it could not open, a font it
-could not find, an assertion in some configurations. Before this existed, such a run reported
-every case `ok` while the geometry was wrong, and there was nothing to gate on.
+OpenSCAD exits 0 on several `ERROR:` conditions — a parameter file it could not open, a font
+file it could not read. Before this existed, such a run reported every case `ok` while the
+geometry was wrong, and there was nothing to gate on.
+
+A missing font *family* is worse still, and this does not catch it: OpenSCAD substitutes one
+silently, with no message at all.
 
 So in CI, gate on `counts.errors` as well as `counts.failed`:
 
@@ -163,6 +173,16 @@ In order: `--openscad-path`, then `$OPENSCAD`, then `openscad` on `PATH`, then t
 usual install location. The choice and the version are resolved once per run and recorded in the
 summary.
 
+Only the last two are a fallback chain. `--openscad-path` and `$OPENSCAD` name a specific
+executable, so one that does not resolve is an error rather than a reason to look elsewhere:
+
+```
+$ scadbatch export … --openscad-path /nope/openscad
+Error: OpenSCAD executable not found (tried --openscad-path '/nope/openscad'). …
+$ echo $?
+1
+```
+
 ```
 scadbatch export model.scad params.csv out/ --openscad-path /opt/openscad/bin/openscad
 OPENSCAD=/opt/openscad/bin/openscad scadbatch export model.scad params.csv out/
@@ -178,7 +198,8 @@ old build changes how a JSON file is handled — see
 parameter file was refused.
 
 A refusal happens before any export runs, so a malformed parameter file costs nothing but the
-one `openscad --version` that detection already needed:
+`--version` and `--help` that detection already needed — the second is how the advertised output
+formats are read:
 
 ```
 $ scadbatch export model.scad ragged.csv out/

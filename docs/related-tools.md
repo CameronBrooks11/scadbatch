@@ -37,18 +37,17 @@ Python.
 <https://github.com/pjaspinski/openscad-batch-exporter>
 
 Reads a CSV, builds `-D` flags from the columns, names the output from the joined values, and
-runs exports in parallel with the count set by editing a constant in the source. STL only.
+runs exports in parallel with the count set by editing a constant in the source. STL only, and
+about fifty lines, so it is quick to read and adapt.
 
-**Use it instead if** you want something small enough to read in one sitting and adapt.
-
-**What scadbatch adds**: Customizer JSON support, arbitrary output formats, and the value
-handling. Serialising a `-D` value is the subtle part of this problem — a string containing a
-space or a quote has exactly one correct form, and getting it wrong produces a command OpenSCAD
-accepts and misreads.
+One detail to know before adopting it: every value is wrapped in quotes, so a numeric column
+reaches OpenSCAD as a string — `-Dwidth="10"` rather than `-Dwidth=10`. Which brings us to the
+thing this problem keeps coming back to: serialising a `-D` value is the subtle part. A string
+containing a space or a quote, a number, a list, a boolean — each has exactly one correct form,
+and getting it wrong produces a command OpenSCAD accepts and misreads.
 
 ### mrdarip/OctoSCAD
 
-Python, early.
 <https://github.com/mrdarip/OctoSCAD>
 
 Aims at exporting the **cross product** of parameter values from a JSON description, including
@@ -65,7 +64,7 @@ Python.
 
 Despite the name, not a parameter sweep. It looks for a `module export()` in a `.scad` file and
 renders **each statement inside it** to its own file, naming each from the trailing comment on
-its line:
+its line, or from the module call when there is no comment:
 
 ```openscad
 module export() {
@@ -82,7 +81,7 @@ parameters of one model.
 
 ### kintel/openscad-benchmark
 
-Shell and OpenSCAD, by OpenSCAD's own maintainer.
+Shell, OpenSCAD and Python, by OpenSCAD's own maintainer.
 <https://github.com/kintel/openscad-benchmark>
 
 A performance harness for OpenSCAD itself — geometry timing, VBO rendering, frame counts — with
@@ -99,13 +98,41 @@ That composes with scadbatch, which consumes such a file but will not generate o
 
 **Use it instead if** you are measuring OpenSCAD's performance rather than producing models.
 
+### BelfrySCAD/openscad_test
+
+Python, from the organisation behind BOSL2.
+<https://github.com/BelfrySCAD/openscad_test> · `pip install openscad-test`
+
+A test framework that runs OpenSCAD scripts and asserts on what they print. Tests are `[[test]]`
+sections in a TOML `.scadtest` file, each with an inline `script` or a `script_file`, variables
+passed via `set_vars` (which become `-D` flags), and assertions: `expect_success`,
+`assert_echoes`, `assert_warnings`, `assert_no_echoes`, `assert_no_warnings`, plus a per-test
+`timeout`. It has a CLI with `-j` for parallelism and a Python API.
+
+```toml
+[[test]]
+name = "Echo Integer Test"
+script = "echo(42);"
+expect_success = true
+assert_echoes = ["ECHO: 42"]
+```
+
+**Use it instead if** you want to assert that a model behaves correctly, rather than to produce
+files from it. It is the closest thing here to scadbatch in construction — Python, a CLI and an
+API, bounded parallelism, per-case timeouts — and it answers a different question: it tests, and
+does not export.
+
+The overlap worth noting is that it classifies OpenSCAD's output lines into echoes, warnings and
+errors, which is the same problem `counts.errors` solves here, approached from the other side.
+
 ### UnitTestSCAD, SpecSCAD
 
 <https://github.com/HopefulLlama/UnitTestSCAD> · <https://github.com/matths/SpecSCAD>
 
-Test frameworks for OpenSCAD code — assertions about functions and modules, unit-style and
-BDD-style respectively. They test the source; scadbatch builds artefacts from it. The two are
-complementary, and neither replaces the other.
+Test frameworks for OpenSCAD code, unit-style and BDD-style respectively. UnitTestSCAD asserts
+about both functions and modules; SpecSCAD's README is explicit that it "tests **only functions**
+(not modules), encouraging you to place core logic into reusable functions". They test the
+source; scadbatch builds artefacts from it.
 
 ### A plain shell loop
 
@@ -132,10 +159,15 @@ people should start with. Reach for a tool when one of these starts to bite:
 
   The shell's own quoting is then a second layer on top of that one, and the loop above is
   already wrong for a CSV field containing a comma.
-- **silent wrong results** — OpenSCAD exits 0 when it ignores a value it cannot convert, so a
-  typo in a column name produces a full set of outputs built at the defaults.
-- **errors that still exit 0** — a missing font or an unreadable parameter file prints `ERROR:`
-  and exits 0, so `set -e` does not catch it.
+- **silent wrong results** — a misspelled variable is simply never used, so a typo in a column
+  name gives you a full set of outputs built at the defaults, exit 0, no message:
+
+  ```
+  $ openscad -o out.stl -Dwdith=99 m.scad
+  ECHO: w = 10, h = 20
+  ```
+- **errors that still exit 0** — an unreadable parameter file, or a font file it cannot read,
+  prints `ERROR:` and exits 0, so `set -e` does not catch it.
 - **parallelism** — easy to add with `xargs -P`, easy to get wrong in a way that interleaves
   output.
 - **wanting to know what happened** — which case produced which file, how long each took, which
@@ -143,10 +175,10 @@ people should start with. Reach for a tool when one of these starts to bite:
 
 ## What none of these do
 
-Generating the parameter sets. Every tool here, scadbatch included, consumes a list of parameter
-sets someone else produced — by hand, from a spreadsheet, or from the OpenSCAD Customizer.
-Neither a cross-product sweep nor a design-of-experiments selection is covered, and
-`gen_param_sets` above is the closest thing that exists.
+Generating the parameter sets, with one partial exception. `gen_param_sets` above does build a
+cross product, as part of a benchmarking harness. Otherwise every tool here, scadbatch included,
+consumes a list someone else produced — by hand, from a spreadsheet, or from the OpenSCAD
+Customizer — and no general cross-product sweep or design-of-experiments selection exists.
 
 ## Why a new tool rather than contributing to one of these
 
