@@ -1,7 +1,7 @@
 """Command-line interface.
 
 Available subcommands:
-- export: Batch export STL files.
+- export: Batch export models.
 - csv2json: Convert CSV parameter files to JSON.
 - json2csv: Convert JSON parameter files to CSV.
 - gui: Launch the graphical user interface."""
@@ -29,7 +29,7 @@ def parse_arguments(argv=None):
     """
     parser = argparse.ArgumentParser(
         description=(
-            "Batch export STL files from OpenSCAD using CSV or JSON parameters, "
+            "Batch export models from OpenSCAD using CSV or JSON parameters, "
             "and convert between CSV and JSON."
         )
     )
@@ -43,13 +43,15 @@ def parse_arguments(argv=None):
 
     # Export subcommand
     export_parser = subparsers.add_parser(
-        "export", help="Export STL files from OpenSCAD using CSV or JSON parameters."
+        "export", help="Export models from OpenSCAD using CSV or JSON parameters."
     )
     export_parser.add_argument("scad_file", help="Path to the OpenSCAD (.scad) file.")
     export_parser.add_argument(
         "parameter_file", help="Path to the CSV or JSON file containing parameters."
     )
-    export_parser.add_argument("output_folder", help="Directory where STL files will be saved.")
+    export_parser.add_argument(
+        "output_folder", help="Directory where exported files will be saved."
+    )
     export_parser.add_argument(
         "--openscad-path",
         "--openscad_path",

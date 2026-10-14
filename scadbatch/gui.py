@@ -3,7 +3,7 @@
 """
 Graphical User Interface (GUI) for the OpenSCAD Batch Exporter.
 
-This GUI allows users to configure batch exports of STL files from OpenSCAD using CSV or
+This GUI allows users to configure batch exports of models from OpenSCAD using CSV or
 JSON parameters.
 It also provides functionalities to convert parameter files between CSV and JSON formats.
 
@@ -432,7 +432,7 @@ class OpenSCADBatchExporterGUI:
         Args:
             scad (str): Path to the OpenSCAD (.scad) file.
             param (str): Path to the parameter file (CSV or JSON).
-            output (str): Output directory for STL files.
+            output (str): Output directory for exported files.
             openscad (str): Path to the OpenSCAD executable.
             fmt (str): Export format ('asciistl' or 'binstl').
             sel (str): Selection string for parameter sets.
