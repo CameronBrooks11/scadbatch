@@ -9,10 +9,12 @@ type: software
 authors:
   - family-names: Brooks
     given-names: Cameron K.
-    affiliation: Department of Electrical & Computer Engineering, Western University, London, ON, Canada
+    affiliation: Department of Electrical & Computer Engineering, Western University, London, ON N6A 5B9, Canada
   - family-names: Pearce
     given-names: Joshua M.
-    affiliation: Department of Electrical & Computer Engineering and Ivey Business School, Western University, London, ON, Canada
+    # paper.md gives Pearce two affiliations; CFF 1.2.0 allows one string per author, so they
+    # are joined here rather than dropped.
+    affiliation: Department of Electrical & Computer Engineering and Ivey Business School, Western University, London, ON N6A 5B9, Canada
 repository-code: https://github.com/CameronBrooks11/scadbatch
 url: https://github.com/CameronBrooks11/scadbatch
 license: AGPL-3.0-or-later

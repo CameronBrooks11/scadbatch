@@ -7,6 +7,17 @@ Notable changes to scadbatch. The format follows
 Entries are reconstructed from the merged pull requests, which are linked so the reasoning and
 the measurements behind each change stay reachable.
 
+Not every commit appears here. `v1.1.0..main` is 81 commits, of which 36 are squashed pull
+requests; the other 45 are direct pushes, almost all paper revisions, figures and examples from
+November and December 2024, including the automated `(auto) Paper PDF Draft` commits. None of
+them changes the tool.
+
+Of the 36 pull requests, seven are left out because nothing about them is visible to someone
+using the tool: dependency pin bumps (#1, #2, #47), the version bump that cut 2.0.0rc1 (#52),
+the paper-draft workflow (#38), and the two fixes to the release workflow's own frozen-GUI
+self-check (#53, #54). The release workflow itself is listed, under 2.0.0rc1, because what it
+produces is something a user gets.
+
 ## [Unreleased]
 
 Everything here landed after `2.0.0rc1` and will ship in `2.0.0`.
@@ -17,9 +28,9 @@ Everything here landed after `2.0.0rc1` and will ship in `2.0.0`.
   default applies, instead of passing the empty string. OpenSCAD cannot read `""` as a number:
   it warns, falls back and still exits 0, so the previous behaviour built a model the row never
   asked for. To ask for the empty string, give a cell whose text is `""`. ([#67])
-- Parameter files that cannot be read faithfully are now refused rather than guessed at. Each
-  refusal names the file and the place in it:
-  - a root, `parameterSets`, or individual set that is not a JSON object ([#64], [#69])
+- Parameter files whose values OpenSCAD would silently misread are now refused, rather than
+  exported with geometry the file never asked for. Each of these previously exited 0 with the
+  wrong result, and each refusal now names the file and the place in it:
   - a `NaN`, `Infinity` or `-Infinity` token anywhere in the file, which OpenSCAD's reader
     refuses wholesale — so one of them made every set export at the model's defaults — and a
     number literal that overflows, which it parses and then cannot use ([#73])
@@ -40,8 +51,12 @@ Everything here landed after `2.0.0rc1` and will ship in `2.0.0`.
 
 ### Fixed
 
-- `read_json` raised `AttributeError` and `TypeError` from inside itself on a malformed file,
-  which the CLI does not catch, so it reached the user as a traceback. ([#64], [#69])
+- A JSON root, `parameterSets`, or individual set that is not an object is refused with a message
+  naming which level is wrong. Previously `read_json` raised `AttributeError` or `TypeError` from
+  inside itself — `'list' object has no attribute 'items'` for `{"parameterSets": []}` — which
+  reached the user as a traceback: `export` catches only `OpenSCADError` and `ValueError`
+  (`cli.py:241`), and while the conversion subcommands also catch `TypeError` (`cli.py:260`),
+  nothing catches `AttributeError`. ([#64], [#69])
 - A `--name-template` may reference a parameter a given row leaves unset; it renders empty
   rather than refusing the whole batch. ([#67])
 - `read_csv` reports which parameters each row leaves unset, because OpenSCAD is silent when it
@@ -84,9 +99,10 @@ Windows attached to the GitHub release.
 - `--name-template` for output names, with filesystem-safe sanitising and a refusal when two
   cases would produce the same file. ([#41])
 - The OpenSCAD executable and its version are detected once per run. ([#33])
-- A release workflow: pushing a `v*.*.*` tag verifies the tree, builds the distribution, freezes
-  the binaries, waits for an approval, then publishes to PyPI with trusted publishing and
-  attaches the binaries to a GitHub release. ([#49])
+- A release workflow: pushing a `v*.*.*` tag verifies the tree, builds the distribution and
+  freezes the binaries, then publishes to PyPI with trusted publishing behind a required
+  approval, and creates a GitHub release with the binaries attached. Only the PyPI step waits on
+  the approval. ([#49])
 - A test suite with unit and integration layers, the latter against a real OpenSCAD across a CI
   matrix. ([#26], [#28])
 - `ruff`, a `justfile` and a pre-commit configuration. ([#27])
@@ -99,16 +115,15 @@ Windows attached to the GitHub release.
 - The `gui` subcommand works in a frozen binary, where the entry module has no parent package.
   ([#51])
 
-## [1.1.0] — 2024-12-01
-
-## [1.0.0] — 2024-11-23
+## [1.1.0] — 2024-12-01 and [1.0.0] — 2024-11-23
 
 The original `openscad-batch-export`: a single `export.py` with a Tkinter interface, released
 before this project kept a changelog. The commit history and the
 [release notes](https://github.com/CameronBrooks11/scadbatch/releases) are the record for these
 two. They are not reconstructed here, because the intent behind individual commits of that era
-is no longer recoverable with any confidence, and a changelog that guesses is worse than one
-that says it does not know.
+is no longer recoverable with any confidence — `updated readme to reflect latest updates`, and
+`Fix workflow issues` five times — and a changelog that guesses is worse than one that says it
+does not know.
 
 <!-- Contributions from outside the maintainer are credited on the pull requests linked above;
      #64 is from @Jah-yee. -->

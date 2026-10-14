@@ -29,13 +29,16 @@ one approval and the archive step.
 The `verify` job compares the tag with the packaged version as plain strings:
 
 ```sh
-version=$(...)                 # from the built distribution
+version=$(... tomllib ... pyproject.toml ...)   # the raw string in the file
 tag="${GITHUB_REF_NAME#v}"
 test "$version" = "$tag"
 ```
 
-So `v2.0.0rc1` requires `version = "2.0.0rc1"` exactly. A difference in spelling that PEP 440
-would normalise away — `2.0.0-rc1`, `2.0.0.rc1` — still fails this check.
+So `v2.0.0rc1` requires `version = "2.0.0rc1"` exactly. That the version is read straight out of
+`pyproject.toml` is what makes this strict: a difference in spelling PEP 440 would normalise
+away — `2.0.0-rc1`, `2.0.0.rc1` — still fails, because nothing here normalises either side. Were
+the version taken from the built wheel instead, all three spellings would compare equal and the
+check would pass.
 
 ```sh
 git checkout main && git pull
@@ -45,7 +48,10 @@ git push origin v2.0.0
 
 The workflow triggers on tags matching `v*.*.*` and nothing else.
 
-## What runs, in order
+## What runs
+
+`verify`, `dist` and `binaries` declare no dependencies, so they start together. Only the last
+two are ordered, and both wait on all three of the first:
 
 | job | what it does |
 | --- | --- |
@@ -79,8 +85,12 @@ Approve it in the run's page, or:
 
 ```sh
 gh api repos/CameronBrooks11/scadbatch/actions/runs/<id>/pending_deployments \
-  -f state=approved -F environment_ids='[<id>]'
+  -f state=approved -f comment=ok -F 'environment_ids[]=<environment id>'
 ```
+
+`comment` is required by the endpoint, and the array needs `key[]=value`: `-F`'s type conversion
+covers only `true`, `false`, `null` and integers, so `-F environment_ids='[123]'` sends the
+string `"[123]"` and the request fails.
 
 Publishing uses PyPI trusted publishing over OIDC: no token exists anywhere, and `id-token:
 write` is granted to that one job and nowhere else. A trusted publisher is configured with the
@@ -109,9 +119,11 @@ is updated to match.
 
 ## Rehearsing without spending a version
 
-A tag whose version does not match `pyproject.toml` fails `verify` immediately, which blocks
-`pypi` — while `binaries` still runs in full. So a throwaway tag exercises the expensive,
-platform-dependent half for free:
+A tag whose version does not match `pyproject.toml` fails `verify`, which blocks `pypi` — while
+`binaries`, depending on nothing, still runs in full. So a throwaway tag exercises the expensive,
+platform-dependent half for free. Not quickly, though: the version check is `verify`'s **last**
+step, after `just setup`, `just check` and the test suite under `xvfb-run`, so the rehearsal pays
+for a complete gate run before the mismatch is reported.
 
 ```sh
 git tag v0.0.0-smoke && git push origin v0.0.0-smoke
@@ -120,8 +132,11 @@ git tag -d v0.0.0-smoke && git push origin :refs/tags/v0.0.0-smoke
 gh run delete <id>
 ```
 
-This is worth doing when anything in the `binaries` job has changed. Two releases were burned on
-that job being subtly wrong, and neither failure could be reproduced locally.
+This is worth doing when anything in the `binaries` job has changed. Cutting `2.0.0rc1` took
+three release runs: the first two failed on `Binary (ubuntu-latest)` alone, with `Publish to
+PyPI` skipped both times, so nothing was published and the tag was simply re-pointed. That is
+the `pypi needs binaries` rule working — but each attempt cost a full release run, and a
+rehearsal tag would have found it without touching the real tag.
 
 ## If a release fails
 
