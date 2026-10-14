@@ -147,10 +147,47 @@ def read_json(json_path, encoding=DEFAULT_ENCODING):
     Raises:
         ValueError: If the file is not text in that encoding, is not valid JSON, or is not
             shaped like a parameter file -- a root that is not an object, a 'parameterSets'
-            that is not an object, or a set that is not an object. A root object with no
-            'parameterSets' key reads as no parameter sets rather than raising.
+            that is not an object, or a set that is not an object -- or holds a number
+            OpenSCAD cannot use: a NaN or Infinity token anywhere in the document, or a
+            number literal that overflows. A root object with no 'parameterSets' key reads
+            as no parameter sets rather than raising.
     """
-    data = json.loads(_read_text(json_path, encoding))
+    # json.loads accepts two kinds of number OpenSCAD cannot use, and they need different
+    # messages because the engine treats them differently. The hooks separate them: a literal
+    # NaN/Infinity/-Infinity token is not JSON at all and OpenSCAD's reader refuses the whole
+    # file, wherever in the document it sits; a number literal that overflows to inf is valid
+    # JSON, which the engine parses and then cannot honour, dropping that one value.
+    tokens = []
+    overflowed = []
+
+    def parse_constant(token):
+        tokens.append(token)
+        return math.nan if token == "NaN" else math.inf if token == "Infinity" else -math.inf
+
+    def parse_float(text):
+        value = float(text)
+        if not math.isfinite(value):
+            overflowed.append(text)
+        return value
+
+    data = json.loads(
+        _read_text(json_path, encoding),
+        parse_constant=parse_constant,
+        parse_float=parse_float,
+    )
+    if tokens or overflowed:
+        where = _path_to_non_finite(data) or "a value"
+        if tokens:
+            raise ValueError(
+                f"{json_path}: {where} is {tokens[0]}, which JSON does not define as a value. "
+                f"OpenSCAD's reader refuses the whole file rather than the one token, so "
+                f"every set in it would export at the model's defaults."
+            )
+        raise ValueError(
+            f"{json_path}: {where} is {overflowed[0]}, which is out of range for a number. "
+            f"OpenSCAD parses the file and then cannot use that value, so this parameter "
+            f"alone would fall back to the model's default."
+        )
     # A Customizer file is {"parameterSets": {"<set>": {"<param>": <value>}}}, so there are
     # three levels to get wrong. Checking only the root left the other two raising
     # AttributeError, which the CLI does not catch, so they reached the user as tracebacks.
@@ -173,39 +210,30 @@ def read_json(json_path, encoding=DEFAULT_ENCODING):
                 f"{json_path}: parameter set {name!r} must be a JSON object of parameter "
                 f"names to values; here it is {_an(_json_type_name(params))}."
             )
-        for key, value in params.items():
-            found = _non_finite_in(value)
-            if found:
-                raise ValueError(
-                    f"{json_path}: parameter {key!r} of set {name!r} is {found}, which "
-                    f"OpenSCAD's JSON reader will not parse. It refuses the whole file "
-                    f"rather than the one value, so every set in it would export at the "
-                    f"model's defaults. Give a finite number."
-                )
         param_set = params.copy()
         param_set["exported_filename"] = name
         parameters.append(param_set)
     return parameters
 
 
-def _non_finite_in(value):
-    """The first non-finite number in ``value``, spelled as JSON spells it, or None.
+def _path_to_non_finite(data):
+    """Where the first non-finite number sits, as a path a reader can follow, or None.
 
-    json.loads accepts NaN, Infinity and -Infinity by default; OpenSCAD's JSON reader does
-    not, and it rejects the file rather than the value. Containers are searched because the
-    token spoils the file wherever it sits.
+    Iterative rather than recursive: json.loads parses files that nest deeper than Python's
+    recursion limit, and a recursive walk over one raised RecursionError -- which is not a
+    ValueError, so it reached the user as a traceback instead of a message.
     """
-    if isinstance(value, float) and not math.isfinite(value):
-        return "-Infinity" if value < 0 else ("Infinity" if value > 0 else "NaN")
-    # json.loads produces only these containers; everything else is a leaf.
-    if isinstance(value, dict):
-        value = value.values()
-    elif not isinstance(value, list):
-        return None
-    for item in value:
-        found = _non_finite_in(item)
-        if found:
-            return found
+    stack = [("", data)]
+    while stack:
+        path, value = stack.pop()
+        if isinstance(value, float) and not math.isfinite(value):
+            return path or "the whole file"
+        if False:
+            for key, item in reversed(list(value.items())):
+                stack.append((f"{path} -> {key}" if path else str(key), item))
+        elif isinstance(value, list):
+            for index, item in reversed(list(enumerate(value))):
+                stack.append((f"{path}[{index}]", item))
     return None
 
 
@@ -313,7 +341,7 @@ def read_parameters(parameter_file, encoding=DEFAULT_ENCODING):
     Raises:
         ValueError: If the file extension is not .csv or .json, the file is not text in
             that encoding, a CSV row does not have one cell per header column, or a JSON
-            file is not shaped like a parameter file.
+            file is not shaped like a parameter file or holds a number OpenSCAD cannot use.
     """
     ext = os.path.splitext(str(parameter_file))[1].lower()
     if ext == ".csv":
@@ -658,7 +686,7 @@ def csv_to_json(csv_file, json_file, encoding=DEFAULT_ENCODING):
     with open(json_file, "w", encoding="utf-8") as jf:
         # Written as real UTF-8 rather than \uXXXX escapes, so a set name reads as itself;
         # OpenSCAD accepts either form (checked on 2026.09.05).
-        json.dump(json_data, jf, indent=4, ensure_ascii=False)
+        json.dump(json_data, jf, indent=4, ensure_ascii=False, allow_nan=False)
     log.info("Converted %s to %s.", csv_file, json_file)
 
 
