@@ -55,6 +55,10 @@ Everything here landed after `2.0.0rc1` and will ship in `2.0.0`.
 - `CONTRIBUTING.md`, `CODE_OF_CONDUCT.md`, `SUPPORT.md`, issue forms and a pull request
   template. ([#81])
 - This changelog, `CITATION.cff` for GitHub's citation button, and `docs/releasing.md`. ([#83])
+- The pre-commit hooks are now enforced. The config had been in the repository since 2.0.0rc1
+  with nothing installing or running it, so its checks — trailing whitespace, end-of-file
+  newlines, YAML syntax, stray conflict markers — had never fired. `just hooks` installs them
+  locally, and CI runs them on every pull request whether or not anyone did. ([#92])
 - `docs/parameters.md`, `docs/execution.md` and `docs/related-tools.md`, with the README
   restructured around them: what the tool is, how to install it from PyPI, and one CLI and one
   Python example, rather than a platform-specific install walkthrough. ([#85])
@@ -174,3 +178,4 @@ does not know.
 [#83]: https://github.com/CameronBrooks11/scadbatch/pull/83
 [#85]: https://github.com/CameronBrooks11/scadbatch/pull/85
 [#90]: https://github.com/CameronBrooks11/scadbatch/pull/90
+[#92]: https://github.com/CameronBrooks11/scadbatch/pull/92

@@ -1,10 +1,25 @@
+# Hooks cover what `just check` does not: whitespace, end-of-file, YAML and the things a
+# Python-only lint gate never looks at. Enforced by CI (`pre-commit run --all-files`), so the
+# checks apply whether or not a contributor ran `just hooks`.
+#
+# ruff runs through the project's own pinned version rather than a second one pinned here. Two
+# pins drift, and a hook disagreeing with the gate is worse than either alone: `language:
+# system` means these use the ruff in the synced environment, so there is one version to update.
 repos:
-  - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.16.7
+  - repo: local
     hooks:
-      - id: ruff
-        args: [--fix]
+      - id: ruff-check
+        name: ruff check (the project's pinned ruff)
+        entry: uv run ruff check --fix
+        language: system
+        types_or: [python, pyi]
+        require_serial: true
       - id: ruff-format
+        name: ruff format (the project's pinned ruff)
+        entry: uv run ruff format
+        language: system
+        types_or: [python, pyi]
+        require_serial: true
 
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v6.0.0

@@ -10,6 +10,16 @@ default:
 setup:
     uv sync
 
+# Install the git pre-commit hooks (opt-in; CI enforces the same checks regardless)
+#
+# Deliberately not part of `setup`: pre-commit builds a hook environment per repo on first
+# run, which needs network access a confined session may not have, and a hook that cannot
+# build leaves that session unable to commit at all. CI runs the same hooks, so skipping
+# this costs a round trip, not a missed check.
+[doc("Install the git pre-commit hooks (opt-in)")]
+hooks:
+    uv run pre-commit install
+
 # Format code (mutates working tree — use locally)
 fmt:
     uv run ruff format .
