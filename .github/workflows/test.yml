@@ -32,6 +32,21 @@ jobs:
       - run: just setup
       - run: just check
 
+  hooks:
+    name: Pre-commit hooks
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v10.2.0
+      - uses: extractions/setup-just@v4
+      # The ruff hooks are `language: system` and run the project's own ruff, so the
+      # environment has to be synced before the hooks run.
+      - run: just setup
+      # --show-diff-on-failure: the fixing hooks mutate files, and a diff says what they
+      # changed. Without it a failure reports only which hook was unhappy.
+      - run: uv run pre-commit run --all-files --show-diff-on-failure
+
   test:
     name: Test (py${{ matrix.python }}, openscad ${{ matrix.openscad }})
     runs-on: ubuntu-latest

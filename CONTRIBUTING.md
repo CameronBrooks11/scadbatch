@@ -34,9 +34,22 @@ just check && just test
 `just check` is what CI runs: formatting and lint, non-mutating. `just fmt` fixes formatting
 locally. Do not skip CI.
 
-There is a `.pre-commit-config.yaml` in the repo, but nothing installs or runs it — it is not
-in the dev dependencies, the justfile or any workflow, so a fresh clone has no hooks. `just
-check && just test` is the gate that is actually enforced (#82).
+`just hooks` installs the git pre-commit hooks, which cover what `just check` does not —
+trailing whitespace, end-of-file newlines, YAML syntax — plus ruff, through the project's own
+pinned version rather than a second one.
+
+CI runs `pre-commit run --all-files`, so those apply to every pull request whether or not you
+installed the hooks; installing them only moves the feedback earlier. To reproduce that CI job
+locally, run `uv run pre-commit run --all-files` — note it fixes files in place rather than only
+reporting.
+
+**Two hooks only do anything at commit time**, so the CI run is not a substitute:
+`check-merge-conflict` does nothing unless the repository is mid-merge or mid-rebase, and
+`check-added-large-files` looks at files staged as additions, which CI has none of. If you want
+those, install the hooks.
+
+They are deliberately not part of `just setup`, because pre-commit builds a hook environment on
+first run and a confined environment that cannot build one is left unable to commit at all.
 
 ## How changes are organised
 

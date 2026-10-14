@@ -1,10 +1,39 @@
+# Hooks cover what `just check` does not: whitespace, end-of-file, YAML and the things a
+# Python-only lint gate never looks at. CI runs `pre-commit run --all-files`, so most of these
+# apply whether or not a contributor ran `just hooks` — see the two exceptions below.
+#
+# ruff runs through the project's own pinned version rather than a second one pinned here. Two
+# pins drift, and a hook disagreeing with the gate is worse than either alone: `language:
+# system` means these use the ruff in the synced environment, so there is one version to update.
+#
+# Two of the hooks below only do anything at commit time, by design, so the CI run cannot
+# substitute for them:
+#   - check-merge-conflict returns early unless the repo is mid-merge or mid-rebase, which a
+#     fresh CI checkout never is
+#   - check-added-large-files looks at files staged as additions, and CI stages nothing
+# They are kept because that is the moment they are for; `--assume-in-merge` and
+# `--enforce-all` would make them fire in CI, at the cost of scanning every file on every run
+# and needing an exclude for the two large files already committed under paper/.
 repos:
-  - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.16.7
+  - repo: local
     hooks:
-      - id: ruff
-        args: [--fix]
+      - id: ruff-check
+        name: ruff check (the project's pinned ruff)
+        # --frozen: a bare `uv run` re-locks, so without it a commit that touches
+        # dependencies has uv.lock rewritten underneath it by a lint hook and left unstaged.
+        # --frozen rather than --no-sync, which would also decline to create the environment
+        # and fail with "Failed to spawn: ruff" on a clone that has not run `just setup`.
+        # require_serial because these share one project environment.
+        entry: uv run --frozen ruff check --fix
+        language: system
+        types_or: [python, pyi]
+        require_serial: true
       - id: ruff-format
+        name: ruff format (the project's pinned ruff)
+        entry: uv run --frozen ruff format
+        language: system
+        types_or: [python, pyi]
+        require_serial: true
 
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v6.0.0
