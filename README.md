@@ -294,9 +294,13 @@ A customizable sign with adjustable message, size, and resolution parameters fro
 - `examples/sign/sign.csv`
 - `examples/sign/sign.json`
 
-## Contributing
+## Contributing and support
 
-Contributions are welcome! Please open an issue or submit a pull request with improvements or suggestions.
+Contributions are welcome, and a bug report with a reproduction is as useful as a patch.
+
+- [CONTRIBUTING.md](CONTRIBUTING.md) — setting up, the checks to run, and how changes are organised: one issue, one branch, one pull request
+- [SUPPORT.md](SUPPORT.md) — where to ask, what to include, and what response to expect
+- [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) — Contributor Covenant 2.1
 
 ## License
 

@@ -1,0 +1,10 @@
+blank_issues_enabled: true
+contact_links:
+  - name: How support works
+    url: https://github.com/CameronBrooks11/scadbatch/blob/main/SUPPORT.md
+    about: What to include, and what response to expect.
+  - name: OpenSCAD itself
+    url: https://github.com/openscad/openscad/issues
+    about: >
+      For how OpenSCAD renders, what it accepts in a parameter set, or a message it printed
+      that this tool only passed along.
