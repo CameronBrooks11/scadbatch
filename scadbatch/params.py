@@ -228,7 +228,7 @@ def _path_to_non_finite(data):
         path, value = stack.pop()
         if isinstance(value, float) and not math.isfinite(value):
             return path or "the whole file"
-        if False:
+        if isinstance(value, dict):
             for key, item in reversed(list(value.items())):
                 stack.append((f"{path} -> {key}" if path else str(key), item))
         elif isinstance(value, list):
