@@ -264,6 +264,55 @@ def test_the_cli_reports_a_bad_shape_without_a_traceback(
     assert "p.json" in captured.err and "must be a JSON object" in captured.err
 
 
+# --- a number OpenSCAD's JSON reader will not take ----------------------------------
+
+NON_FINITE = ["NaN", "Infinity", "-Infinity"]
+
+
+@pytest.mark.parametrize("literal", NON_FINITE)
+def test_a_non_finite_number_is_refused_naming_the_set_and_parameter(tmp_path, literal):
+    """json.loads accepts these three; OpenSCAD's JSON reader does not, and it rejects the
+    whole file rather than the one value -- so a single NaN makes every set in the file export
+    at the model's defaults."""
+    src = tmp_path / "p.json"
+    src.write_text('{"parameterSets": {"big": {"d": 20}, "bad": {"d": ' + literal + "}}}")
+
+    with pytest.raises(ValueError) as excinfo:
+        read_json(src)
+
+    message = str(excinfo.value)
+    assert "p.json" in message
+    assert "'bad'" in message and "'d'" in message
+    assert "every set" in message  # the surprising part: the good set is spoiled too
+
+
+@pytest.mark.parametrize(
+    "value",
+    ["[1, NaN]", "[[1], [NaN]]", '{"x": NaN}'],
+    ids=["in-a-list", "nested-lists", "in-an-object"],
+)
+def test_a_non_finite_number_is_found_inside_a_container(tmp_path, value):
+    """OpenSCAD's reader rejects the file wherever the token sits, so looking only at the
+    top level of a set would miss it."""
+    src = tmp_path / "p.json"
+    src.write_text('{"parameterSets": {"s": {"v": ' + value + "}}}")
+
+    with pytest.raises(ValueError, match=r"'v'.*'s'|'s'.*'v'"):
+        read_json(src)
+
+
+@pytest.mark.parametrize("value", ["0", "-1", "1e308", "1.5", '"NaN"', "true", "null"])
+def test_a_finite_value_is_untouched(tmp_path, value):
+    """Including the string "NaN", which is text and not a number, and the largest float
+    json.loads will parse without overflowing."""
+    src = tmp_path / "p.json"
+    src.write_text('{"parameterSets": {"s": {"v": ' + value + "}}}")
+
+    (read,) = read_json(src)
+
+    assert read["exported_filename"] == "s" and "v" in read
+
+
 def test_the_message_speaks_json_rather_than_python(tmp_path):
     """The file is JSON and its format is OpenSCAD's Customizer; 'dict' and 'list' are
     Python's words for things the user never wrote."""

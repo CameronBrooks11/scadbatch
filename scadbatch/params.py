@@ -173,10 +173,40 @@ def read_json(json_path, encoding=DEFAULT_ENCODING):
                 f"{json_path}: parameter set {name!r} must be a JSON object of parameter "
                 f"names to values; here it is {_an(_json_type_name(params))}."
             )
+        for key, value in params.items():
+            found = _non_finite_in(value)
+            if found:
+                raise ValueError(
+                    f"{json_path}: parameter {key!r} of set {name!r} is {found}, which "
+                    f"OpenSCAD's JSON reader will not parse. It refuses the whole file "
+                    f"rather than the one value, so every set in it would export at the "
+                    f"model's defaults. Give a finite number."
+                )
         param_set = params.copy()
         param_set["exported_filename"] = name
         parameters.append(param_set)
     return parameters
+
+
+def _non_finite_in(value):
+    """The first non-finite number in ``value``, spelled as JSON spells it, or None.
+
+    json.loads accepts NaN, Infinity and -Infinity by default; OpenSCAD's JSON reader does
+    not, and it rejects the file rather than the value. Containers are searched because the
+    token spoils the file wherever it sits.
+    """
+    if isinstance(value, float) and not math.isfinite(value):
+        return "-Infinity" if value < 0 else ("Infinity" if value > 0 else "NaN")
+    # json.loads produces only these containers; everything else is a leaf.
+    if isinstance(value, dict):
+        value = value.values()
+    elif not isinstance(value, list):
+        return None
+    for item in value:
+        found = _non_finite_in(item)
+        if found:
+            return found
+    return None
 
 
 def _json_type_name(value):
