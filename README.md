@@ -195,6 +195,12 @@ scadbatch json2csv <json_file> <csv_file> [--encoding NAME]
 scadbatch json2csv examples/sign/sign.json examples/sign/sign_converted.csv
 ```
 
+## Contributing and support
+
+- [CONTRIBUTING.md](CONTRIBUTING.md) — how to set up, run the checks, and how changes are organised
+- [SUPPORT.md](SUPPORT.md) — where to ask, what to include, what response to expect
+- [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) — Contributor Covenant 2.1
+
 ## CSV File Structure
 
 - The CSV file should have a header row with parameter names.

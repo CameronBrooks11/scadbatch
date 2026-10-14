@@ -1,0 +1,41 @@
+name: Feature request
+description: Something the tool should be able to do and cannot.
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What are you trying to do
+      description: >
+        The task, not the feature. What are you exporting, and what makes it awkward or
+        impossible now? A concrete case is easier to design against than a general capability.
+    validations:
+      required: true
+  - type: textarea
+    id: workaround
+    attributes:
+      label: How you work around it today
+      description: >
+        A script, a manual step, a second pass over the output — whatever you do instead. This
+        often shows what the feature actually has to cover.
+    validations:
+      required: false
+  - type: textarea
+    id: shape
+    attributes:
+      label: What it might look like
+      description: >
+        A flag, an argument, a column — if you have a shape in mind. Entirely optional, and a
+        clear problem with no proposed solution is a perfectly good request.
+    validations:
+      required: false
+  - type: checkboxes
+    id: scope
+    attributes:
+      label: Does OpenSCAD already do this
+      description: >
+        This tool drives OpenSCAD and does not reimplement it. If the behaviour you want is
+        OpenSCAD's own, the request may belong upstream instead.
+      options:
+        - label: I have checked that this is about batching and parameter handling rather than OpenSCAD's own rendering
+          required: false
