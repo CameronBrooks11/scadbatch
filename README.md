@@ -215,7 +215,7 @@ scadbatch json2csv examples/sign/sign.json examples/sign/sign_converted.csv
 
 ## JSON File Structure
 
-The JSON file should follow the structure used by OpenSCAD's customizer profiles. It should contain a `parameterSets` object, where each key is the `exported_filename` and its value is a dictionary of parameters.
+The JSON file should follow the structure used by OpenSCAD's customizer profiles. It should contain a `parameterSets` object, where each key is the `exported_filename` and its value is a JSON object of parameters.
 
 **Example JSON file (`simpleCube.json`):**
 

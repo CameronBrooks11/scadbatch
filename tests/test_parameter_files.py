@@ -167,18 +167,23 @@ BAD_SHAPES = [
     ('{"parameterSets": []}', "parameterSets", "array"),
     ('{"parameterSets": "nope"}', "parameterSets", "string"),
     ('{"parameterSets": 1}', "parameterSets", "number"),
-    ('{"parameterSets": {"lid": "nope"}}', "lid", "string"),
-    ('{"parameterSets": {"lid": [1, 2]}}', "lid", "array"),
-    ('{"parameterSets": {"lid": 7}}', "lid", "number"),
-    ('{"parameterSets": {"lid": null}}', "lid", "null"),
+    ('{"parameterSets": {"lid": "nope"}}', "parameter set 'lid'", "string"),
+    ('{"parameterSets": {"lid": [1, 2]}}', "parameter set 'lid'", "array"),
+    ('{"parameterSets": {"lid": 7}}', "parameter set 'lid'", "number"),
+    ('{"parameterSets": {"lid": null}}', "parameter set 'lid'", "null"),
 ]
 
 
 @pytest.mark.parametrize("text,where,found", BAD_SHAPES, ids=[c[0][:28] for c in BAD_SHAPES])
 def test_a_file_not_shaped_like_a_parameter_set_file_names_the_place(tmp_path, text, where, found):
-    """Three of these reached the CLI as a traceback, because it catches ValueError and
-    TypeError and read_json raised AttributeError. The message has to say which of the three
-    levels was wrong and what was there instead."""
+    """These reached the user as a traceback: read_json raised AttributeError, and the export
+    handler catches only (OpenSCADError, ValueError) while the conversion handler adds
+    TypeError. The message has to say which of the three levels was wrong and what was there
+    instead.
+
+    `where` is the phrase that names the level, not a bare name: the parameterSets message
+    embeds the example {"parameterSets": {"lid": {"d": 10}}}, so a bare "lid" appears in that
+    message too and a set-level row would pass against the wrong one."""
     src = tmp_path / "p.json"
     src.write_text(text)
 
@@ -201,8 +206,14 @@ def test_a_file_not_shaped_like_a_parameter_set_file_names_the_place(tmp_path, t
     ],
 )
 def test_a_file_with_no_sets_to_read_is_not_an_error(tmp_path, text):
-    """OpenSCAD accepts all of these, so refusing them would make us stricter than the
-    engine. An absent parameterSets key reads as no sets, not as a malformed file."""
+    """These four say nothing about what to export, so there is no instruction to misread: an
+    absent parameterSets key reads as no sets, and an empty set as a set that changes nothing.
+    The shapes rejected above differ in kind -- each states an intent and states it wrongly,
+    and defaulting silently would build something the file did not ask for.
+
+    Matching the engine is not what separates them: OpenSCAD accepts all sixteen shapes,
+    rejected and accepted alike, silently keeping the model's defaults (measured against
+    2026.08.01 with -p/-P, reading the .csg)."""
     src = tmp_path / "p.json"
     src.write_text(text)
 
@@ -215,9 +226,17 @@ def test_a_file_with_no_sets_to_read_is_not_an_error(tmp_path, text):
     ids=["parameterSets-not-an-object", "set-not-an-object"],
 )
 @pytest.mark.parametrize("command", ["json2csv", "export"])
-def test_the_cli_reports_a_bad_shape_without_a_traceback(tmp_path, capsys, text, command):
-    """What #65 asked for. These two raised AttributeError, which cli.py does not catch, so
-    they reached the user as a traceback on both routes that read a parameter file."""
+def test_the_cli_reports_a_bad_shape_without_a_traceback(
+    tmp_path, capsys, text, command, fake_openscad
+):
+    """What #65 asked for. These two raised AttributeError, which neither CLI handler
+    catches -- export catches (OpenSCADError, ValueError), the conversions add TypeError -- so
+    they reached the user as a traceback on both routes that read a parameter file.
+
+    The export route is given an engine explicitly: batch_export resolves one before it reads
+    the parameter file, so without --openscad-path this asserts against "OpenSCAD executable
+    not found" wherever none is installed. That is how it reddened the Windows job, which runs
+    the unit tests with no OpenSCAD present."""
     from scadbatch.cli import main
 
     src = tmp_path / "p.json"
@@ -227,7 +246,15 @@ def test_the_cli_reports_a_bad_shape_without_a_traceback(tmp_path, capsys, text,
     else:
         scad = tmp_path / "m.scad"
         scad.write_text("cube(1);\n")
-        argv = ["export", str(scad), str(src), str(tmp_path / "out"), "--dry-run"]
+        argv = [
+            "export",
+            str(scad),
+            str(src),
+            str(tmp_path / "out"),
+            "--openscad-path",
+            fake_openscad,
+            "--dry-run",
+        ]
 
     code = main(argv)
 

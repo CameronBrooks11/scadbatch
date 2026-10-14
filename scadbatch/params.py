@@ -145,7 +145,10 @@ def read_json(json_path, encoding=DEFAULT_ENCODING):
         list of dict: List of parameter dictionaries with 'exported_filename' added.
 
     Raises:
-        ValueError: If the file is not text in that encoding, or not valid JSON.
+        ValueError: If the file is not text in that encoding, is not valid JSON, or is not
+            shaped like a parameter file -- a root that is not an object, a 'parameterSets'
+            that is not an object, or a set that is not an object. A root object with no
+            'parameterSets' key reads as no parameter sets rather than raising.
     """
     data = json.loads(_read_text(json_path, encoding))
     # A Customizer file is {"parameterSets": {"<set>": {"<param>": <value>}}}, so there are
@@ -279,7 +282,8 @@ def read_parameters(parameter_file, encoding=DEFAULT_ENCODING):
 
     Raises:
         ValueError: If the file extension is not .csv or .json, the file is not text in
-            that encoding, or a CSV row does not have one cell per header column.
+            that encoding, a CSV row does not have one cell per header column, or a JSON
+            file is not shaped like a parameter file.
     """
     ext = os.path.splitext(str(parameter_file))[1].lower()
     if ext == ".csv":
