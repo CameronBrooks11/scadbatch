@@ -1,0 +1,33 @@
+cff-version: 1.2.0
+message: If you use this software, please cite it using these metadata.
+title: "scadbatch: batch export models from parametric OpenSCAD designs"
+abstract: >-
+  Batch export models from parametric OpenSCAD designs using CSV or Customizer JSON parameter
+  sets. Exports any format OpenSCAD supports, runs cases in parallel, and records a
+  machine-readable summary of each run.
+type: software
+authors:
+  - family-names: Brooks
+    given-names: Cameron K.
+    affiliation: Department of Electrical & Computer Engineering, Western University, London, ON, Canada
+  - family-names: Pearce
+    given-names: Joshua M.
+    affiliation: Department of Electrical & Computer Engineering and Ivey Business School, Western University, London, ON, Canada
+repository-code: https://github.com/CameronBrooks11/scadbatch
+url: https://github.com/CameronBrooks11/scadbatch
+license: AGPL-3.0-or-later
+version: 2.0.0rc1
+date-released: "2026-09-28"
+keywords:
+  - OpenSCAD
+  - parametric design
+  - batch export
+  - computer-aided design
+  - 3D printing
+  - research software
+# doi: 10.5281/zenodo.XXXXXXX
+#
+# The DOI is deliberately absent rather than guessed. Zenodo mints one per release plus a
+# concept DOI covering all versions, so there is nothing to cite until a release is archived.
+# docs/releasing.md step 7 is where it gets filled in, and the ORCIDs the JOSS submission needs
+# are tracked with the paper rewrite in #24.

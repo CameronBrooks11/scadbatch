@@ -301,6 +301,13 @@ Contributions are welcome, and a bug report with a reproduction is as useful as 
 - [CONTRIBUTING.md](CONTRIBUTING.md) — setting up, the checks to run, and how changes are organised: one issue, one branch, one pull request
 - [SUPPORT.md](SUPPORT.md) — where to ask, what to include, and what response to expect
 - [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) — Contributor Covenant 2.1
+- [CHANGELOG.md](CHANGELOG.md) — what changed in each release, with the pull request behind each entry
+- [docs/releasing.md](docs/releasing.md) — how a release is cut
+
+## Citing
+
+[CITATION.cff](CITATION.cff) carries the metadata GitHub's "Cite this repository" button reads.
+A DOI will be added once a release is archived on Zenodo.
 
 ## License
 
