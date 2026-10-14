@@ -159,6 +159,20 @@ def read_json(json_path, encoding=DEFAULT_ENCODING):
     # JSON, which the engine parses and then cannot honour, dropping that one value.
     tokens = []
     overflowed = []
+    repeated = []
+
+    def object_pairs_hook(pairs):
+        # json.loads keeps the last of a repeated key. OpenSCAD's JSON reader preserves
+        # duplicates instead, and -P takes the first match, so a set named twice built the
+        # one we did not report -- measured on 2026.08.01: we read d = 11, it built d = 7.
+        # Within a set both take the last, so that case agrees; it is still a file saying two
+        # things about one parameter, and either way one of them is discarded in silence.
+        seen = {}
+        for key, value in pairs:
+            if key in seen:
+                repeated.append(key)
+            seen[key] = value
+        return seen
 
     def parse_constant(token):
         tokens.append(token)
@@ -175,6 +189,7 @@ def read_json(json_path, encoding=DEFAULT_ENCODING):
             _read_text(json_path, encoding),
             parse_constant=parse_constant,
             parse_float=parse_float,
+            object_pairs_hook=object_pairs_hook,
         )
     except RecursionError as e:
         # json.loads recurses per nesting level, and how deep it manages depends on the
@@ -185,6 +200,18 @@ def read_json(json_path, encoding=DEFAULT_ENCODING):
             f"{json_path}: this file's JSON nests too deeply to read. A parameter value "
             f"nested that far is not one OpenSCAD can use either."
         ) from e
+    if repeated:
+        name = repeated[0]
+        what = (
+            f"parameter set {name!r} is named twice"
+            if isinstance(data, dict) and name in (data.get("parameterSets") or {})
+            else f"{name!r} is given twice in the same object"
+        )
+        raise ValueError(
+            f"{json_path}: {what}. A parameter file cannot say two things about one name: "
+            f"OpenSCAD takes the first set of a repeated name and the last value of a "
+            f"repeated parameter, so one of them is discarded without a word."
+        )
     if tokens or overflowed:
         where = _path_to_non_finite(data) or "a value"
         if tokens:

@@ -425,6 +425,57 @@ def test_a_usable_value_is_untouched(tmp_path, value):
     assert read["exported_filename"] == "s" and "v" in read
 
 
+# --- a name given twice --------------------------------------------------------------
+
+
+def test_a_set_named_twice_is_refused_because_the_engine_picks_the_other_one(tmp_path):
+    """json.loads keeps the last duplicate key; OpenSCAD keeps the first, because its JSON
+    reader preserves duplicates and -P takes the first match. Measured against 2026.08.01 on
+    d = 5: we read d = 11 and the engine built d = 7, so the summary reported values it never
+    used."""
+    src = write_json(tmp_path, '{"parameterSets": {"a": {"d": 7}, "a": {"d": 11}}}')
+
+    with pytest.raises(ValueError) as excinfo:
+        read_json(src)
+
+    message = str(excinfo.value)
+    assert "p.json" in message
+    # the set level has to be named as such: "'a' is given twice in the same object" is true
+    # of a repeated parameter too, so matching only the name and "twice" pins nothing
+    assert "parameter set 'a' is named twice" in message
+
+
+def test_a_parameter_named_twice_in_one_set_is_refused(tmp_path):
+    """Here the engine agrees with json.loads -- both take the last, measured as d = 11 --
+    so this is not a disagreement. It is refused because the file states two values for one
+    parameter and keeping either silently discards what the user wrote."""
+    src = write_json(tmp_path, '{"parameterSets": {"a": {"d": 7, "d": 11}}}')
+
+    with pytest.raises(ValueError, match="'d'"):
+        read_json(src)
+
+
+def test_the_same_name_in_two_different_sets_is_fine(tmp_path):
+    """Two sets may of course set the same parameter; only a repeat within one object is a
+    second instruction for the same thing."""
+    src = write_json(tmp_path, '{"parameterSets": {"a": {"d": 7}, "b": {"d": 11}}}')
+
+    a, b = read_json(src)
+
+    assert a["d"] == 7 and b["d"] == 11
+
+
+def test_a_duplicate_outside_parameterSets_is_refused_too(tmp_path):
+    """OpenSCAD reads the document, so an ambiguous key anywhere makes the file ambiguous."""
+    src = write_json(
+        tmp_path,
+        '{"parameterSets": {"a": {"d": 7}}, "fileFormatVersion": "1", "fileFormatVersion": "2"}',
+    )
+
+    with pytest.raises(ValueError, match="fileFormatVersion"):
+        read_json(src)
+
+
 def test_the_message_speaks_json_rather_than_python(tmp_path):
     """The file is JSON and its format is OpenSCAD's Customizer; 'dict' and 'list' are
     Python's words for things the user never wrote."""
