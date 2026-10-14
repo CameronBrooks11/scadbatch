@@ -145,21 +145,57 @@ def read_json(json_path, encoding=DEFAULT_ENCODING):
         list of dict: List of parameter dictionaries with 'exported_filename' added.
 
     Raises:
-        ValueError: If the file is not text in that encoding, or not valid JSON.
+        ValueError: If the file is not text in that encoding, is not valid JSON, or is not
+            shaped like a parameter file -- a root that is not an object, a 'parameterSets'
+            that is not an object, or a set that is not an object. A root object with no
+            'parameterSets' key reads as no parameter sets rather than raising.
     """
     data = json.loads(_read_text(json_path, encoding))
+    # A Customizer file is {"parameterSets": {"<set>": {"<param>": <value>}}}, so there are
+    # three levels to get wrong. Checking only the root left the other two raising
+    # AttributeError, which the CLI does not catch, so they reached the user as tracebacks.
     if not isinstance(data, dict):
         raise ValueError(
-            f"{json_path}: JSON root must be a dict with a 'parameterSets' key, "
-            f"but got {type(data).__name__}."
+            f"{json_path}: a parameter file must be a JSON object. This file's root is "
+            f"{_an(_json_type_name(data))}, so there is nowhere for 'parameterSets' to be."
         )
     parameter_sets = data.get("parameterSets", {})
+    if not isinstance(parameter_sets, dict):
+        raise ValueError(
+            f"{json_path}: 'parameterSets' must be a JSON object naming each set, like "
+            f'{{"parameterSets": {{"lid": {{"d": 10}}}}}}; here it is '
+            f"{_an(_json_type_name(parameter_sets))}."
+        )
     parameters = []
     for name, params in parameter_sets.items():
+        if not isinstance(params, dict):
+            raise ValueError(
+                f"{json_path}: parameter set {name!r} must be a JSON object of parameter "
+                f"names to values; here it is {_an(_json_type_name(params))}."
+            )
         param_set = params.copy()
         param_set["exported_filename"] = name
         parameters.append(param_set)
     return parameters
+
+
+def _json_type_name(value):
+    """What JSON calls this value's type. The file is JSON written to OpenSCAD's Customizer
+    format, so ``dict`` and ``list`` are Python's names for things the user never wrote."""
+    if value is None:
+        return "null"
+    if isinstance(value, bool):  # before the number check: a bool is an int in Python only
+        return "boolean"
+    if isinstance(value, (int, float)):
+        return "number"
+    return {dict: "object", list: "array", str: "string"}.get(type(value), type(value).__name__)
+
+
+def _an(noun):
+    """``a string``, ``an array``, ``null`` -- so the messages above read as sentences."""
+    if noun == "null":
+        return noun
+    return f"an {noun}" if noun[0] in "aeiou" else f"a {noun}"
 
 
 def is_parameter_set_file(parameter_file):
@@ -246,7 +282,8 @@ def read_parameters(parameter_file, encoding=DEFAULT_ENCODING):
 
     Raises:
         ValueError: If the file extension is not .csv or .json, the file is not text in
-            that encoding, or a CSV row does not have one cell per header column.
+            that encoding, a CSV row does not have one cell per header column, or a JSON
+            file is not shaped like a parameter file.
     """
     ext = os.path.splitext(str(parameter_file))[1].lower()
     if ext == ".csv":
