@@ -30,7 +30,10 @@ from scadbatch.params import (
 log = logging.getLogger("scadbatch")
 
 # The distribution name, used both to look up our own version and to record it in a run
-# summary. One literal, so a rename cannot leave the two disagreeing.
+# summary, so those two cannot disagree. It is still an unchecked copy of pyproject.toml's
+# ``name``: rename the distribution without touching this and the lookup below quietly
+# returns None. An integration test asserts the recorded version is not None, because that
+# mismatch is only visible against a real install.
 _TOOL_NAME = "scadbatch"
 
 

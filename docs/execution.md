@@ -138,6 +138,9 @@ Recording the OpenSCAD path and version is the point of the `openscad` block: th
 file and the same model produce different geometry across OpenSCAD releases, so a result without
 the engine version is not reproducible.
 
+`tool.version` is read from the installed distribution's metadata, so it is `null` when scadbatch
+runs from a source tree rather than an install. `tool.name` is always there.
+
 ### counts.errors is not counts.failed
 
 `status` is one of `ok`, `failed`, `timeout`, `skipped`, or `dry-run` under `--dry-run`, and
