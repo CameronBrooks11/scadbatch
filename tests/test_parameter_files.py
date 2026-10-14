@@ -1,11 +1,18 @@
 import csv
 import json
+import math
 import re
 from pathlib import Path
 
 import pytest
 
-from scadbatch.params import csv_to_json, json_to_csv, read_csv, read_json
+from scadbatch.params import (
+    _path_to_non_finite,
+    csv_to_json,
+    json_to_csv,
+    read_csv,
+    read_json,
+)
 
 EXAMPLES = Path(__file__).resolve().parent.parent / "examples"
 EXAMPLE_NAMES = sorted(p.name for p in EXAMPLES.iterdir() if (p / f"{p.name}.csv").exists())
@@ -318,6 +325,38 @@ def test_a_token_in_a_container_is_named_by_its_path(tmp_path, value, path):
 
     with pytest.raises(ValueError, match=re.escape(path)):
         read_json(src)
+
+
+def test_the_path_walk_finds_a_non_finite_without_json_involved():
+    """The walk on its own, over a structure built in Python rather than parsed.
+
+    This exists to split one failure into two. The tests above go through json.loads, so if
+    they fail while this passes, the document reaching the walk has no non-finite in it and
+    the parse is at fault; if this fails too, the walk is. They disagreed between this machine
+    and CI once, and nothing distinguished the two causes.
+    """
+    document = {"parameterSets": {"big": {"d": 20.0}, "bad": {"d": float("nan")}}}
+
+    assert _path_to_non_finite(document) == "parameterSets -> bad -> d"
+    assert _path_to_non_finite({"fileFormatVersion": float("inf")}) == "fileFormatVersion"
+    assert _path_to_non_finite({"a": {"v": [1, float("-inf")]}}) == "a -> v[1]"
+    assert _path_to_non_finite({"a": {"v": [[1], [float("nan")]]}}) == "a -> v[1][0]"
+    assert _path_to_non_finite({"a": {"d": 1.0}}) is None
+
+
+def test_json_loads_puts_the_token_into_the_document_as_a_non_finite_float():
+    """The other half: that this interpreter's json.loads really does hand the walk a
+    non-finite float for each token, through whichever scanner it uses."""
+    for token, check in (
+        ("NaN", math.isnan),
+        ("Infinity", lambda v: v > 0),
+        ("-Infinity", lambda v: v < 0),
+    ):
+        document = json.loads('{"d": ' + token + "}")
+        value = document["d"]
+        assert isinstance(value, float), (token, type(value))
+        assert not math.isfinite(value), (token, value)
+        assert check(value), (token, value)
 
 
 def test_an_overflowing_number_is_refused_as_out_of_range(tmp_path):
