@@ -4,8 +4,8 @@ Batch export models from parametric OpenSCAD designs using CSV or Customizer JSO
 sets.
 
 One `.scad` model plus a list of parameter sets gives you one output file per set per output
-format — any format OpenSCAD can write, several at a time, with a machine-readable record of what
-happened.
+format — in any format OpenSCAD can write, several at a time, with a machine-readable record of
+what happened.
 
 ```
 scadbatch export model.scad params.csv out/
