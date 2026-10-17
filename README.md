@@ -3,8 +3,8 @@
 Batch export models from parametric OpenSCAD designs using CSV or Customizer JSON parameter
 sets.
 
-One `.scad` model plus a list of parameter sets gives you one output file per set per format — in
-any format OpenSCAD can write, several at a time, with a machine-readable record of what
+One `.scad` model plus a list of parameter sets gives you one output file per set per output
+format — any format OpenSCAD can write, several at a time, with a machine-readable record of what
 happened.
 
 ```
@@ -105,7 +105,7 @@ range and the parameter file's encoding; watch the log; and convert between CSV 
 
 | command | what it does |
 | --- | --- |
-| `scadbatch export <scad> <params> <out/>` | export one file per parameter set per format |
+| `scadbatch export <scad> <params> <out/>` | export one file per parameter set per output format |
 | `scadbatch csv2json <csv> <json>` | CSV to a Customizer parameter-set file |
 | `scadbatch json2csv <json> <csv>` | and back |
 | `scadbatch gui` | the graphical interface |
