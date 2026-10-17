@@ -1,7 +1,7 @@
 # Parameter files
 
 A parameter file says which models to build. Each **parameter set** is one row of a CSV or one
-entry in a Customizer JSON file, and becomes one output file.
+entry in a Customizer JSON file, and becomes one output file per requested format.
 
 Both formats describe the same thing, and `scadbatch csv2json` / `scadbatch json2csv` convert
 between them. They are not equivalent in how they reach OpenSCAD, which is the subject of
