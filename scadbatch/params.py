@@ -74,8 +74,8 @@ def read_csv(csv_path, encoding=DEFAULT_ENCODING):
         list of dict: List of parameter dictionaries.
 
     Raises:
-        ValueError: If the file is not text in that encoding, or a row does not have one
-            cell per header column.
+        ValueError: If the file is not text in that encoding, the header names a column
+            more than once, or a row does not have one cell per header column.
     """
     # csv.DictReader is not used here because it absorbs a ragged row instead of
     # reporting one: extra cells land under restkey, which is None and reaches OpenSCAD
@@ -85,8 +85,18 @@ def read_csv(csv_path, encoding=DEFAULT_ENCODING):
     header = next((row for row in reader if row), None)
     if header is None:
         return []
-    rows = []
     line = reader.line_num
+    repeated = sorted({k for k in header if header.count(k) > 1}, key=header.index)
+    if repeated:
+        # Each row is built by name, so only the last of the repeated columns would survive
+        # and the others' values would be dropped silently. read_json refuses the same
+        # mistake in a parameter-set file.
+        names = ", ".join(repr(k) for k in repeated)
+        raise ValueError(
+            f"{csv_path} line {line}: the header names {names} more than once, so it is not "
+            "clear which column holds the value. Give each column its own name."
+        )
+    rows = []
     for row in reader:
         start, line = line + 1, reader.line_num
         if not row:

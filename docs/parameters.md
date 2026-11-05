@@ -63,6 +63,10 @@ counts. Python's CSV reader pads a short row with `None` and collects a long row
 under a `None` key, either of which previously became a `-D` flag like `-DNone=["2"]` — which
 OpenSCAD accepts, ignores, and exits 0 on.
 
+A header that names a column twice is refused too, naming the file and the column. Each row is
+read by column name, so only the last of the repeated columns would survive. Names are
+case-sensitive, as they are in OpenSCAD, so `d` and `D` are two parameters.
+
 ## Customizer JSON
 
 The format OpenSCAD's own Customizer saves, so a `.json` saved from the GUI works unchanged:
