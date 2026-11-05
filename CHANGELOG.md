@@ -77,6 +77,10 @@ Everything here landed after `2.0.0rc1` and will ship in `2.0.0`.
   rather than refusing the whole batch. ([#67])
 - `read_csv` reports which parameters each row leaves unset, because OpenSCAD is silent when it
   ignores a value. ([#67])
+- A `json2csv` that fails partway leaves no CSV behind. It wrote the header and each row as it
+  converted them, so a value it could not serialize left a truncated file that reads as a valid
+  parameter file with fewer sets, and an existing CSV at that path was overwritten before the
+  failure. Every row is now converted before the file is written. ([#102])
 
 ### Security
 
@@ -181,3 +185,4 @@ does not know.
 [#85]: https://github.com/CameronBrooks11/scadbatch/pull/85
 [#90]: https://github.com/CameronBrooks11/scadbatch/pull/90
 [#94]: https://github.com/CameronBrooks11/scadbatch/pull/94
+[#102]: https://github.com/CameronBrooks11/scadbatch/pull/102
