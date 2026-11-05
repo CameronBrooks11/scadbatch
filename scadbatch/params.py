@@ -828,18 +828,23 @@ def json_to_csv(json_file, csv_file, encoding=DEFAULT_ENCODING):
         all_keys.update(params.keys())
     # Ensure 'exported_filename' is first column
     fieldnames = ["exported_filename"] + sorted(all_keys - {"exported_filename"})
+    # Every row is converted before the output is opened, as csv_to_json does: a value that
+    # cannot be written raises partway through, and writing as we went would leave a
+    # truncated CSV behind that reads as a valid file with fewer sets.
+    buffer = io.StringIO(newline="")
+    writer = csv.DictWriter(buffer, fieldnames=fieldnames)
+    writer.writeheader()
+    for param_set in parameter_sets:
+        row = {"exported_filename": param_set.get("exported_filename", "model")}
+        # A key this set does not have becomes a blank cell, which read_csv reads back
+        # as unset. So does a value of "", which is deliberate: OpenSCAD ignores "" for
+        # any parameter whose default is not a string, so writing it through as an empty
+        # string would make the CSV route build a model the JSON route does not.
+        for key in all_keys - {"exported_filename"}:
+            row[key] = _csv_cell(param_set.get(key, ""))
+        writer.writerow(row)
     with open(csv_file, "w", newline="", encoding="utf-8") as csvfile:
-        writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
-        writer.writeheader()
-        for param_set in parameter_sets:
-            row = {"exported_filename": param_set.get("exported_filename", "model")}
-            # A key this set does not have becomes a blank cell, which read_csv reads back
-            # as unset. So does a value of "", which is deliberate: OpenSCAD ignores "" for
-            # any parameter whose default is not a string, so writing it through as an empty
-            # string would make the CSV route build a model the JSON route does not.
-            for key in all_keys - {"exported_filename"}:
-                row[key] = _csv_cell(param_set.get(key, ""))
-            writer.writerow(row)
+        csvfile.write(buffer.getvalue())
     log.info("Converted %s to %s.", json_file, csv_file)
 
 
