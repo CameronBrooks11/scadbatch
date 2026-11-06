@@ -162,6 +162,20 @@ def test_the_repeated_column_is_reported_on_the_header_line(tmp_path):
         read_csv(src)
 
 
+def test_columns_differing_only_in_surrounding_whitespace_are_a_repeat(tmp_path):
+    """OpenSCAD reads -D" d=11" as an assignment to d, so the header d, d gives d twice and
+    the engine keeps the later one (see the integration test that pins this)."""
+    src = tmp_path / "p.csv"
+    src.write_text("exported_filename,d, d\na,7,11\n")
+
+    with pytest.raises(ValueError) as excinfo:
+        read_csv(src)
+
+    message = str(excinfo.value)
+    assert str(src) in message
+    assert "'d'" in message and "' d'" in message
+
+
 def test_columns_differing_only_in_case_are_two_parameters(tmp_path):
     """OpenSCAD names are case-sensitive, so d and D are not a repeat."""
     src = tmp_path / "p.csv"

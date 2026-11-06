@@ -64,8 +64,10 @@ under a `None` key, either of which previously became a `-D` flag like `-DNone=[
 OpenSCAD accepts, ignores, and exits 0 on.
 
 A header that names a column twice is refused too, naming the file and the column. Each row is
-read by column name, so only the last of the repeated columns would survive. Names are
-case-sensitive, as they are in OpenSCAD, so `d` and `D` are two parameters.
+read by column name, so only the last of the repeated columns would survive. Two names that
+differ only by surrounding whitespace, such as `d` and ` d`, count as a repeat: OpenSCAD reads
+`-D d=11` as an assignment to `d`, and keeps the later of the two. Names are case-sensitive, as
+they are in OpenSCAD, so `d` and `D` are two parameters.
 
 ## Customizer JSON
 
