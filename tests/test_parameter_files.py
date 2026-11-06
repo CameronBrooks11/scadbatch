@@ -130,6 +130,60 @@ def test_a_row_with_fewer_cells_than_the_header_is_rejected(tmp_path):
     assert "1 cell but the header has 3 columns" in str(excinfo.value)
 
 
+def test_a_column_named_twice_in_the_header_is_refused(tmp_path):
+    """Building each row by name keeps only the last of the two, so the 7 here would be
+    dropped with nothing said. read_json refuses the same mistake in a parameter-set file."""
+    src = tmp_path / "p.csv"
+    src.write_text("exported_filename,d,d\na,7,11\n")
+
+    with pytest.raises(ValueError) as excinfo:
+        read_csv(src)
+
+    message = str(excinfo.value)
+    assert str(src) in message
+    assert "'d'" in message
+
+
+def test_a_repeated_column_is_refused_even_with_no_rows(tmp_path):
+    """The header alone does not describe one parameter per column, so there is nothing to
+    read correctly later either."""
+    src = tmp_path / "p.csv"
+    src.write_text("exported_filename,d,d\n")
+
+    with pytest.raises(ValueError, match="'d'"):
+        read_csv(src)
+
+
+def test_the_repeated_column_is_reported_on_the_header_line(tmp_path):
+    src = tmp_path / "p.csv"
+    src.write_text("\n\nexported_filename,d,d\na,7,11\n")
+
+    with pytest.raises(ValueError, match="line 3"):
+        read_csv(src)
+
+
+def test_columns_differing_only_in_surrounding_whitespace_are_a_repeat(tmp_path):
+    """OpenSCAD reads -D" d=11" as an assignment to d, so the header d, d gives d twice and
+    the engine keeps the later one (see the integration test that pins this)."""
+    src = tmp_path / "p.csv"
+    src.write_text("exported_filename,d, d\na,7,11\n")
+
+    with pytest.raises(ValueError) as excinfo:
+        read_csv(src)
+
+    message = str(excinfo.value)
+    assert str(src) in message
+    assert "'d'" in message and "' d'" in message
+
+
+def test_columns_differing_only_in_case_are_two_parameters(tmp_path):
+    """OpenSCAD names are case-sensitive, so d and D are not a repeat."""
+    src = tmp_path / "p.csv"
+    src.write_text("exported_filename,d,D\na,7,11\n")
+
+    assert read_csv(src) == [{"exported_filename": "a", "d": "7", "D": "11"}]
+
+
 def test_blank_lines_before_the_header_are_skipped(tmp_path):
     """Taking a blank first line as the header reports every row against zero columns."""
     src = tmp_path / "p.csv"

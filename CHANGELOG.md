@@ -41,6 +41,9 @@ Everything here landed after `2.0.0rc1` and will ship in `2.0.0`.
   - the same name given twice at any level. For a repeated *set* name this tool kept the last
     and OpenSCAD selects the first, so a run reported values it did not build ([#77])
   - a CSV row whose cell count does not match the header ([#55])
+  - a CSV header that names a column twice, including two names that differ only by surrounding
+    whitespace, which OpenSCAD reads as one parameter. Only the last of the repeated columns took
+    effect, so `exported_filename,d,d` / `a,7,11` built `d = 11` and dropped the 7 ([#103])
 
 ### Changed
 
@@ -186,3 +189,4 @@ does not know.
 [#90]: https://github.com/CameronBrooks11/scadbatch/pull/90
 [#94]: https://github.com/CameronBrooks11/scadbatch/pull/94
 [#102]: https://github.com/CameronBrooks11/scadbatch/pull/102
+[#103]: https://github.com/CameronBrooks11/scadbatch/pull/103

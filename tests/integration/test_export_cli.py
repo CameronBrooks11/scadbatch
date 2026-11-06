@@ -339,6 +339,28 @@ def test_unsafe_set_name_is_sanitised_but_still_selects_the_right_set(tmp_path):
     assert "not a safe file name" in result.stdout
 
 
+def test_a_d_flag_name_with_surrounding_whitespace_assigns_the_same_parameter(tmp_path):
+    """Pins the engine behaviour read_csv's repeated-column check rests on: -D is read as
+    source text, so a name with a space around it is the same parameter, and the later
+    flag wins. That is why the header d, d is refused as a repeat."""
+    scad = tmp_path / "m.scad"
+    scad.write_text("d = 0;\necho(d = d);\ncube(1);\n")
+    openscad = shutil.which(os.environ.get("OPENSCAD", "openscad"))
+
+    def echoed(*flags):
+        result = subprocess.run(
+            [openscad, "-o", str(tmp_path / "m.stl"), *flags, str(scad)],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        assert result.returncode == 0, result.stderr
+        return next(line for line in result.stderr.splitlines() if line.startswith("ECHO:"))
+
+    assert echoed("-Dd=7", "-D d=11") == "ECHO: d = 11"
+    assert echoed("-D d=11", "-Dd=7") == "ECHO: d = 7"
+
+
 def test_converted_flat_numeric_vectors_reach_openscad_as_literals(tmp_path):
     """csv2json stores a vector as an OpenSCAD literal in a string, because -p/-P
     ignores a JSON array outright. Only a flat numeric vector survives even that; the

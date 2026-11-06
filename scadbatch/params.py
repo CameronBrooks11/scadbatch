@@ -74,8 +74,8 @@ def read_csv(csv_path, encoding=DEFAULT_ENCODING):
         list of dict: List of parameter dictionaries.
 
     Raises:
-        ValueError: If the file is not text in that encoding, or a row does not have one
-            cell per header column.
+        ValueError: If the file is not text in that encoding, the header names a column
+            more than once, or a row does not have one cell per header column.
     """
     # csv.DictReader is not used here because it absorbs a ragged row instead of
     # reporting one: extra cells land under restkey, which is None and reaches OpenSCAD
@@ -85,8 +85,26 @@ def read_csv(csv_path, encoding=DEFAULT_ENCODING):
     header = next((row for row in reader if row), None)
     if header is None:
         return []
-    rows = []
     line = reader.line_num
+    # Names are compared without surrounding whitespace, because OpenSCAD reads -D as
+    # source text: -D" d=11" assigns d exactly as -Dd=11 does, and the later flag wins
+    # (measured on 2021.01). So "d" and " d" are one parameter given twice.
+    spellings = {}
+    for k in header:
+        spellings.setdefault(k.strip(), []).append(k)
+    repeated = [ks for ks in spellings.values() if len(ks) > 1]
+    if repeated:
+        # Each row is built by name, and OpenSCAD keeps the later of two -D flags for one
+        # name, so only the last of the repeated columns would take effect and the others'
+        # values would be dropped silently. read_json refuses the same mistake in a
+        # parameter-set file.
+        names = "; ".join(" and ".join(repr(k) for k in ks) for ks in repeated)
+        raise ValueError(
+            f"{csv_path} line {line}: the header names the same column more than once "
+            f"({names}), so it is not clear which column holds the value. Give each column "
+            "its own name."
+        )
+    rows = []
     for row in reader:
         start, line = line + 1, reader.line_num
         if not row:
