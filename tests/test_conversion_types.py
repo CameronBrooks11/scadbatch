@@ -363,3 +363,31 @@ def test_a_whitespace_only_cell_is_as_unset_as_an_empty_one(tmp_path):
 
     assert b == {"exported_filename": "b", "x": "3"}
     assert construct_d_flags(b) == ["-Dx=3"]
+
+
+# --- a failed conversion writes nothing ----------------------------------------------
+
+
+def test_a_failed_json2csv_leaves_no_csv_behind(tmp_path):
+    # The bad value is in the second set, so a writer that goes row by row has already
+    # written the header and the first row by the time it fails.
+    src = tmp_path / "p.json"
+    src.write_text('{"parameterSets": {"a": {"d": 1}, "b": {"d": {"x": 1}}}}')
+    out = tmp_path / "p.csv"
+
+    with pytest.raises(TypeError):
+        json_to_csv(src, out)
+
+    assert not out.exists()
+
+
+def test_a_failed_json2csv_leaves_an_existing_csv_as_it_was(tmp_path):
+    src = tmp_path / "p.json"
+    src.write_text('{"parameterSets": {"a": {"d": 1}, "b": {"d": {"x": 1}}}}')
+    out = tmp_path / "p.csv"
+    out.write_bytes(b"exported_filename,d\r\nold,7\r\n")
+
+    with pytest.raises(TypeError):
+        json_to_csv(src, out)
+
+    assert out.read_bytes() == b"exported_filename,d\r\nold,7\r\n"
