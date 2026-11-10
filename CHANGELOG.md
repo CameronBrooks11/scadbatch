@@ -35,7 +35,7 @@ Everything here landed after `2.0.0rc1` and will ship in `2.0.0`.
   `"engine": {"name": "openscad", "path": ..., "version": ...}`. This is the same argument as
   the entry above, applied to the sibling that entry cited as the shape to match: keyed by
   role, with the product name as data, so a consumer reads what rendered without knowing the
-  key. `2.0.0rc1` is the only release that wrote the old key. ([#104])
+  key. `2.0.0rc1` is the only release that wrote the old key. ([#105])
 - A blank or whitespace-only CSV cell now leaves that parameter unset, so the model's own
   default applies, instead of passing the empty string. OpenSCAD cannot read `""` as a number:
   it warns, falls back and still exits 0, so the previous behaviour built a model the row never
@@ -198,4 +198,4 @@ does not know.
 [#94]: https://github.com/CameronBrooks11/scadbatch/pull/94
 [#102]: https://github.com/CameronBrooks11/scadbatch/pull/102
 [#103]: https://github.com/CameronBrooks11/scadbatch/pull/103
-[#104]: https://github.com/CameronBrooks11/scadbatch/pull/104
+[#105]: https://github.com/CameronBrooks11/scadbatch/pull/105
