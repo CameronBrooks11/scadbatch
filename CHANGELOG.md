@@ -113,6 +113,12 @@ Everything here landed after `2.0.0rc1` and will ship in `2.0.0`.
   caught it: `json2csv` on a hand-written file printed a traceback, and the export path
   would have done the same. It now says the value nests too deeply, the way reading such
   a file already did. ([#108])
+- The GUI's log pane grows with the window. The main frame reserved its vertical slack for
+  row 10, which holds nothing — the children are rows 0 to 4 — so the log got its requested
+  height and no more, and making the window taller did not enlarge it. ([#110])
+- The GUI window title says `scadbatch` rather than the name the project stopped using in
+  2.0.0rc1. It is built from the same constant the run summary records, so there is no
+  second spelling to leave behind. ([#110])
 
 ### Security
 
@@ -223,3 +229,4 @@ does not know.
 [#106]: https://github.com/CameronBrooks11/scadbatch/pull/106
 [#107]: https://github.com/CameronBrooks11/scadbatch/pull/107
 [#108]: https://github.com/CameronBrooks11/scadbatch/pull/108
+[#110]: https://github.com/CameronBrooks11/scadbatch/pull/110
