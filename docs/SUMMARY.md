@@ -1,6 +1,6 @@
 # Summary
 
-[scadbatch](README.md)
+[Overview](README.md)
 
 - [Parameter files](parameters.md)
 - [Running a batch](execution.md)
