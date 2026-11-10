@@ -172,9 +172,12 @@ Per case, `errors` holds those lines and `warnings` holds **every** message line
 printed — `WARNING:`, `ECHO:`, `DEPRECATED:` and `ERROR:` alike — with `errors` being the subset
 whose prefix marks it an error. The name is narrower than the content.
 
-One consequence worth knowing: because the classification is by line prefix, a model that
-`echo()`s a string beginning with `ERROR:` is counted as having printed an error, and a
-multi-line echoed payload continues on a line with no prefix at all. See issue #59.
+One consequence worth knowing: the classification is by line prefix. A continuation line that
+carries no prefix is kept with the echo it belongs to, so a multi-line echo arrives as one
+message. A continuation that happens to begin with a group name cannot be told apart from a
+real diagnostic in OpenSCAD's output, and is read as one — so a model that `echo()`s a string
+beginning with `ERROR:` is still counted as having printed an error. That direction is
+deliberate: an invented error is visible and recoverable, a hidden one is neither. See #59.
 
 ## Which OpenSCAD is used
 

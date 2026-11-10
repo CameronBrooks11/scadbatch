@@ -92,6 +92,13 @@ Everything here landed after `2.0.0rc1` and will ship in `2.0.0`.
   converted them, so a value it could not serialize left a truncated file that reads as a valid
   parameter file with fewer sets, and an existing CSV at that path was overwritten before the
   failure. Every row is now converted before the file is written. ([#102])
+- A multi-line `echo()` payload arrives as one message rather than losing every line after the
+  first. `echo()` renders a `\n` inside a string as a real newline, and only the first line
+  carries the `ECHO:` prefix the reader matched on, so the rest were dropped from `warnings`
+  entirely. A continuation line that begins with a group name is still read as a diagnostic in
+  its own right, because OpenSCAD's output carries nothing that distinguishes the two; the
+  trade was taken that way deliberately, since an invented error is visible and a suppressed
+  one is not. ([#106])
 
 ### Security
 
@@ -199,3 +206,4 @@ does not know.
 [#102]: https://github.com/CameronBrooks11/scadbatch/pull/102
 [#103]: https://github.com/CameronBrooks11/scadbatch/pull/103
 [#105]: https://github.com/CameronBrooks11/scadbatch/pull/105
+[#106]: https://github.com/CameronBrooks11/scadbatch/pull/106

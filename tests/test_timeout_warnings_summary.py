@@ -493,3 +493,73 @@ def test_cli_creates_the_summary_directory(fake_openscad, params_csv, tmp_path):
     main(cli_args(params_csv, tmp_path, fake_openscad, "--summary", str(summary)))
 
     assert json.loads(summary.read_text())["counts"]["ok"] == 1
+
+
+# OpenSCAD renders a \n inside an echoed string as a real newline, so one message can arrive
+# as several stderr lines. Every fixture below is output measured from OpenSCAD 2026.10.15,
+# not a construction: see #59.
+MULTILINE_ECHO_CASES = [
+    pytest.param(
+        'ECHO: "report:\nERROR: none, all good\nsize=2"\nGeometries in cache: 1',
+        ['ECHO: "report:\nsize=2"', "ERROR: none, all good"],
+        id="a-group-name-inside-an-echo-still-starts-its-own-message",
+    ),
+    pytest.param(
+        'ECHO: "a\nb", [5, 6]\nTotal rendering time: 0:00:00.000',
+        ['ECHO: "a\nb", [5, 6]'],
+        id="a-plain-continuation-is-kept-rather-than-dropped",
+    ),
+    pytest.param(
+        "ECHO: [1, 2, 3]\nECHO: undef\nCurrent top level object is empty.",
+        ["ECHO: [1, 2, 3]", "ECHO: undef"],
+        id="the-render-trailer-is-not-attached-to-a-closed-echo",
+    ),
+    pytest.param(
+        'ECHO: "label", [1, 2]\nGeometries in cache: 1',
+        ['ECHO: "label", [1, 2]'],
+        id="an-echo-ending-in-a-vector-is-complete",
+    ),
+    pytest.param(
+        'ECHO: "quote inside: " and done"\nERROR: a real failure',
+        ['ECHO: "quote inside: " and done"', "ERROR: a real failure"],
+        id="an-unescaped-quote-cannot-swallow-a-real-diagnostic",
+    ),
+]
+
+
+@pytest.mark.parametrize("stderr,expected", MULTILINE_ECHO_CASES)
+def test_a_multi_line_echo_is_one_message(stderr, expected):
+    from scadbatch.runner import _diagnostic_messages
+
+    assert _diagnostic_messages(stderr) == expected
+
+
+def test_an_error_inside_a_multi_line_echo_is_still_counted(fake_openscad, params_csv, tmp_path):
+    """The half of #59 that is not fixable: the group name is indistinguishable in-band.
+
+    OpenSCAD's stderr carries no way to tell a continuation line from a real diagnostic, so
+    this line stays an error. Pinned because the safe reading is the deliberate choice --
+    inventing an error is recoverable, hiding one is not.
+    """
+    from scadbatch.runner import _diagnostic_messages
+
+    messages = _diagnostic_messages('ECHO: "report:\nERROR: none, all good\nsize=2"')
+    errors = [m for m in messages if m.startswith("ERROR:")]
+
+    assert errors == ["ERROR: none, all good"]
+
+
+def test_a_multi_line_echo_survives_the_whole_run(fake_openscad, params_csv, tmp_path, monkeypatch):
+    """End to end, not just the parser: export_stl has to be the thing that joins them."""
+    monkeypatch.setenv(
+        "FAKE_OPENSCAD_STDERR",
+        'ECHO: "report:|ERROR: none, all good|size=2"|Geometries in cache: 1',
+    )
+    out = tmp_path / "o"
+    out.mkdir()
+
+    doc = run(fake_openscad, params_csv, out).to_dict()
+
+    first = doc["results"][0]
+    assert first["warnings"] == ['ECHO: "report:\nsize=2"', "ERROR: none, all good"]
+    assert first["errors"] == ["ERROR: none, all good"]  # the half #59 cannot fix in-band
