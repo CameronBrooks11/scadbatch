@@ -47,8 +47,11 @@ body:
     id: openscad
     attributes:
       label: OpenSCAD version
-      description: "`openscad --version`. Behaviour differs between releases, so this decides a lot."
-      placeholder: OpenSCAD version 2026.08.01
+      description: >
+        The second line of `scadbatch --version`, which reports the OpenSCAD it would
+        actually use — that is the one that matters, and it is not always the one you
+        expect. Behaviour differs between releases, so this decides a lot.
+      placeholder: openscad 2026.08.01 (/usr/bin/openscad)
     validations:
       required: true
   - type: input
@@ -56,9 +59,8 @@ body:
     attributes:
       label: scadbatch version
       description: >
-        `pip show scadbatch` or `uv pip show scadbatch`, or the commit if you are running from
-        a checkout. There is no `--version` flag yet. A `--summary` file records it too, in its
-        `tool` block.
+        The first line of `scadbatch --version`, or the commit if you are running from a
+        checkout. A `--summary` file records it too, in its `tool` block.
     validations:
       required: true
   - type: input

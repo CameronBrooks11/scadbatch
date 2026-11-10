@@ -63,6 +63,12 @@ Everything here landed after `2.0.0rc1` and will ship in `2.0.0`.
 
 ### Added
 
+- `scadbatch --version`, which prints this tool's version and the OpenSCAD a run here would
+  use, then exits 0. Previously there was no flag at all: `-v` is `--verbose`, so `--version`
+  printed a usage error and exited 2, and the version had to come from `pip show` or a
+  `--summary` file. Both halves are reported because which engine answers depends on `PATH`
+  and `$OPENSCAD` rather than on the install, so it cannot be looked up. A missing OpenSCAD is
+  reported on its own line rather than failing the flag. ([#107])
 - `counts.errors` in the `--summary` JSON, and an `errors` list per case: the number of cases
   OpenSCAD printed an error for, including cases it exited 0 on. OpenSCAD exits 0 on several
   `ERROR:` conditions, so a run could report every case `ok` with the geometry wrong and nothing
@@ -209,3 +215,4 @@ does not know.
 [#103]: https://github.com/CameronBrooks11/scadbatch/pull/103
 [#105]: https://github.com/CameronBrooks11/scadbatch/pull/105
 [#106]: https://github.com/CameronBrooks11/scadbatch/pull/106
+[#107]: https://github.com/CameronBrooks11/scadbatch/pull/107
