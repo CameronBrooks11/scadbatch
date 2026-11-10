@@ -185,6 +185,18 @@ In order: `--openscad-path`, then `$OPENSCAD`, then `openscad` on `PATH`, then t
 usual install location. The choice and the version are resolved once per run and recorded in the
 summary.
 
+`scadbatch --version` answers the same question without running a batch, which is the quickest
+way to see which build a run here would pick:
+
+```
+$ scadbatch --version
+scadbatch 2.0.0
+openscad 2026.10.15 (/home/cam/.local/bin/openscad)
+```
+
+It is worth asking rather than assuming. Where several builds are installed, `PATH` and
+`$OPENSCAD` decide between them, and the answer is not always the one the install suggests.
+
 Only the last two are a fallback chain. `--openscad-path` and `$OPENSCAD` name a specific
 executable, so one that does not resolve is an error rather than a reason to look elsewhere:
 

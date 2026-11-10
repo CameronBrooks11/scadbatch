@@ -1,0 +1,18 @@
+[book]
+title = "scadbatch"
+description = "Batch export OpenSCAD models from CSV or Customizer JSON parameter sets."
+authors = ["Cameron Brooks"]
+language = "en"
+# The book is the docs/ folder as it already stands, so the files stay readable on
+# GitHub and there is one copy of each, not a source tree and a rendered duplicate.
+src = "docs"
+
+[build]
+# Without this, a SUMMARY.md entry naming a file that does not exist renders as an
+# empty page and the build still succeeds, so a broken link ships silently. With it,
+# a dangling entry fails the build instead.
+create-missing = false
+
+[output.html]
+git-repository-url = "https://github.com/CameronBrooks11/scadbatch"
+edit-url-template = "https://github.com/CameronBrooks11/scadbatch/edit/main/{path}"
