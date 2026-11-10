@@ -524,6 +524,21 @@ MULTILINE_ECHO_CASES = [
         ['ECHO: "quote inside: " and done"', "ERROR: a real failure"],
         id="an-unescaped-quote-cannot-swallow-a-real-diagnostic",
     ),
+    pytest.param(
+        "ERROR: Assertion 'false' failed: \"multi\nline\ntrace label\" in file t.scad, line 1\n"
+        "TRACE: called by 'assert' in file t.scad, line 1",
+        [
+            "ERROR: Assertion 'false' failed: \"multi\nline\ntrace label\" in file t.scad, line 1",
+            "TRACE: called by 'assert' in file t.scad, line 1",
+        ],
+        id="an-assertion-message-spans-lines-too",
+    ),
+    pytest.param(
+        "TRACE: call of 'inner(label = \"multi\\nline\")' in file t.scad, line 1\n"
+        "Current top level object is empty.",
+        ["TRACE: call of 'inner(label = \"multi\\nline\")' in file t.scad, line 1"],
+        id="trace-escapes-the-newline-so-it-never-spans-lines",
+    ),
 ]
 
 

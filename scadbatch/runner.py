@@ -398,10 +398,14 @@ def _diagnostic_messages(stderr):
     """OpenSCAD's message lines, with a newline rendered inside ECHO/TRACE kept attached.
 
     ``echo()`` renders a ``\\n`` inside a string as a real newline, so one message can span
-    several physical lines. A line carrying no group name is attached to the chatter message
-    whose quoted payload is still open, instead of being dropped. A line that does carry one
-    always starts its own message, so a genuine diagnostic is never absorbed into an echo --
-    which is why the reported ``ERROR:`` in a multi-line echo stays an error (#59).
+    several physical lines. An ``ERROR:`` can too, because an assertion renders its message.
+    A line carrying no group name is attached to the message whose quoted payload is still
+    open, instead of being dropped. A line that does carry one always starts its own message,
+    so a genuine diagnostic is never absorbed into another -- which is why the reported
+    ``ERROR:`` inside a multi-line echo stays an error (#59).
+
+    A complete line leaves an earlier open message open, so a payload interrupted by another
+    group's line is still rejoined: that is what recovers ``size=2"`` in #59's report.
 
     An open payload is recognised by an odd number of ``"``. OpenSCAD prints an echoed
     string's bytes unescaped, so a literal quote inside one leaves the count odd on a message
@@ -410,16 +414,16 @@ def _diagnostic_messages(stderr):
     render trailer (``Geometries in cache: 1`` and the rest) would be attached instead.
     """
     messages = []
-    open_chatter = None  # index of the chatter message whose payload is unterminated
+    open_message = None  # index of the message whose quoted payload is unterminated
     for line in stderr.splitlines():
         if line.startswith(_DIAGNOSTIC_PREFIXES):
             messages.append(line)
-            if line.startswith(_CHATTER_PREFIXES):
-                open_chatter = len(messages) - 1 if line.count('"') % 2 else None
-        elif open_chatter is not None:
-            messages[open_chatter] += "\n" + line
-            if messages[open_chatter].count('"') % 2 == 0:
-                open_chatter = None
+            if line.count('"') % 2:
+                open_message = len(messages) - 1
+        elif open_message is not None:
+            messages[open_message] += "\n" + line
+            if messages[open_message].count('"') % 2 == 0:
+                open_message = None
     return messages
 
 
