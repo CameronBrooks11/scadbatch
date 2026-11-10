@@ -107,6 +107,12 @@ Everything here landed after `2.0.0rc1` and will ship in `2.0.0`.
   diagnostic in its own right, because OpenSCAD's output carries nothing that distinguishes
   the two; that trade is deliberate, since an invented error is visible and a suppressed one
   is not. `TRACE:` is unaffected: it escapes the newline. ([#106])
+- A parameter value nested deeper than the interpreter can walk is reported rather than
+  reaching the user as a `RecursionError` traceback. `to_scad_literal` recurses once per
+  level of a vector, and `RecursionError` is not a `ValueError`, so neither CLI handler
+  caught it: `json2csv` on a hand-written file printed a traceback, and the export path
+  would have done the same. It now says the value nests too deeply, the way reading such
+  a file already did. ([#108])
 
 ### Security
 
@@ -216,3 +222,4 @@ does not know.
 [#105]: https://github.com/CameronBrooks11/scadbatch/pull/105
 [#106]: https://github.com/CameronBrooks11/scadbatch/pull/106
 [#107]: https://github.com/CameronBrooks11/scadbatch/pull/107
+[#108]: https://github.com/CameronBrooks11/scadbatch/pull/108

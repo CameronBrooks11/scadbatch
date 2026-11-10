@@ -154,3 +154,24 @@ def test_preserves_parameter_order():
 def test_malformed_vector_in_parameters_names_the_parameter():
     with pytest.raises(ValueError, match="Parameter 'pts': Invalid vector"):
         construct_d_flags({"pts": "[1, 2"})
+
+
+def _nested(depth, innermost=1):
+    """A vector nested `depth` deep, built in Python: json.loads cannot deliver one this
+    deep on every interpreter, and the point is the serializer, not the reader."""
+    value = innermost
+    for _ in range(depth):
+        value = [value]
+    return value
+
+
+def test_a_value_nested_past_the_recursion_limit_reports_rather_than_tracebacks():
+    """`to_scad_literal` recurses per level, and `RecursionError` is not a `ValueError`,
+    so neither CLI handler caught it and it reached the user as a traceback (#75)."""
+    with pytest.raises(ValueError, match="nests too deeply"):
+        to_scad_literal(_nested(10_000))
+
+
+def test_a_deeply_but_not_absurdly_nested_value_still_serializes():
+    """The pair matters: a serializer that refused everything would pass the test above."""
+    assert to_scad_literal(_nested(50)) == "[" * 50 + "1" + "]" * 50

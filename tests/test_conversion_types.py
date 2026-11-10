@@ -219,6 +219,28 @@ def test_cli_reports_an_unserialisable_json_value_without_a_traceback(tmp_path, 
     assert "Traceback" not in captured.err
 
 
+def test_cli_reports_a_too_deeply_nested_json_value_without_a_traceback(tmp_path, capsys):
+    """`to_scad_literal` recursed per level and `RecursionError` is not a `ValueError`, so
+    this reached the user as a traceback (#75).
+
+    Which layer reports it depends on the interpreter: `json.loads` gives up at a different
+    depth on 3.10 than on 3.13, so at 2000 levels the reader refuses the file on one and the
+    serializer refuses the value on the other. Both say "nests too deeply", which is the
+    property worth pinning -- asserting which one would be an assertion about the version.
+    """
+    from scadbatch.cli import main
+
+    src = tmp_path / "p.json"
+    src.write_text('{"parameterSets": {"row": {"v": ' + "[" * 2000 + "1" + "]" * 2000 + "}}}")
+
+    code = main(["json2csv", str(src), str(tmp_path / "p.csv")])
+
+    captured = capsys.readouterr()
+    assert code == 1
+    assert "nests too deeply" in captured.err
+    assert "Traceback" not in captured.err
+
+
 # --- an empty cell is a parameter that was not set -----------------------------------
 
 

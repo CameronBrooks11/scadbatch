@@ -562,9 +562,24 @@ def to_scad_literal(value):
     list/tuple -> vector (recursively), ScadRange -> range, None -> undef.
 
     Raises:
-        ValueError: For non-finite floats, which OpenSCAD has no literal for.
+        ValueError: For non-finite floats, which OpenSCAD has no literal for, and for a
+            value that nests deeper than this interpreter can walk.
         TypeError: For any other type.
     """
+    try:
+        return _to_scad_literal(value)
+    except RecursionError:
+        # Caught out here rather than inside the recursion: the stack has unwound by the
+        # time it reaches this frame, so there is room to raise. read_json and
+        # _parse_vector report their own depth limits the same way, and the limit depends
+        # on the caller's stack depth as well as the value, so the same file can serialize
+        # on one code path and not on another.
+        raise ValueError(
+            "Cannot serialize a value that nests too deeply as an OpenSCAD literal"
+        ) from None
+
+
+def _to_scad_literal(value):
     if isinstance(value, bool):
         return "true" if value else "false"
     if isinstance(value, int):
@@ -580,9 +595,9 @@ def to_scad_literal(value):
         parts = (
             [value.start, value.end] if value.step is None else [value.start, value.step, value.end]
         )
-        return "[" + " : ".join(to_scad_literal(v) for v in parts) + "]"
+        return "[" + " : ".join(_to_scad_literal(v) for v in parts) + "]"
     if isinstance(value, (list, tuple)):
-        return "[" + ", ".join(to_scad_literal(v) for v in value) + "]"
+        return "[" + ", ".join(_to_scad_literal(v) for v in value) + "]"
     if value is None:
         return "undef"
     raise TypeError(f"Cannot serialize {type(value).__name__} as an OpenSCAD literal")
