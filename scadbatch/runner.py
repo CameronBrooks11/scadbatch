@@ -100,7 +100,11 @@ class ExportResult:
     command: list[str] | None = None
     """The OpenSCAD command line for this case (None if it never got that far)."""
     warnings: list[str] = field(default_factory=list)
-    """OpenSCAD's message lines from stderr (WARNING:, ECHO:, ERROR:, DEPRECATED:, ...)."""
+    """OpenSCAD's messages from stderr (WARNING:, ECHO:, ERROR:, DEPRECATED:, ...).
+
+    One entry is one message, which for an ECHO: or TRACE: carrying a rendered newline
+    spans several lines. Every entry still starts with its group name.
+    """
     timed_out: bool = False
     """True when OpenSCAD was killed for exceeding the per-case timeout."""
     index: int | None = None
@@ -344,7 +348,7 @@ def export_stl(
         _active.discard(proc)
     duration = time.perf_counter() - start_time
     stderr = stderr_bytes.decode(errors="replace").strip()
-    warnings = [line for line in stderr.splitlines() if line.startswith(_DIAGNOSTIC_PREFIXES)]
+    warnings = _diagnostic_messages(stderr)
     returncode = proc.returncode
     ok = returncode == 0 and os.path.exists(partial)  # a killed process never exits 0
     if ok:
@@ -388,6 +392,39 @@ _CHATTER_PREFIXES = ("ECHO:", "TRACE:")
 # The groups that report something going wrong, as opposed to a warning OpenSCAD carries on
 # from. OpenSCAD still exits 0 for several of these.
 _ERROR_PREFIXES = ("ERROR:", "PARSER-ERROR:", "UI-ERROR:", "EXPORT-ERROR:")
+
+
+def _diagnostic_messages(stderr):
+    """OpenSCAD's message lines, with a newline rendered inside ECHO/TRACE kept attached.
+
+    ``echo()`` renders a ``\\n`` inside a string as a real newline, so one message can span
+    several physical lines. An ``ERROR:`` can too, because an assertion renders its message.
+    A line carrying no group name is attached to the message whose quoted payload is still
+    open, instead of being dropped. A line that does carry one always starts its own message,
+    so a genuine diagnostic is never absorbed into another -- which is why the reported
+    ``ERROR:`` inside a multi-line echo stays an error (#59).
+
+    A complete line leaves an earlier open message open, so a payload interrupted by another
+    group's line is still rejoined: that is what recovers ``size=2"`` in #59's report.
+
+    An open payload is recognised by an odd number of ``"``. OpenSCAD prints an echoed
+    string's bytes unescaped, so a literal quote inside one leaves the count odd on a message
+    that is in fact complete: ``echo("a \\" b")`` prints ``ECHO: "a " b"``. The cost is an
+    extra line attached to that echo. It cannot hide a diagnostic, and without the check the
+    render trailer (``Geometries in cache: 1`` and the rest) would be attached instead.
+    """
+    messages = []
+    open_message = None  # index of the message whose quoted payload is unterminated
+    for line in stderr.splitlines():
+        if line.startswith(_DIAGNOSTIC_PREFIXES):
+            messages.append(line)
+            if line.count('"') % 2:
+                open_message = len(messages) - 1
+        elif open_message is not None:
+            messages[open_message] += "\n" + line
+            if messages[open_message].count('"') % 2 == 0:
+                open_message = None
+    return messages
 
 
 def build_command(openscad_path, scad_file, output_file, export_format, param_args, extra_args=()):

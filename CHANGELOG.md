@@ -92,6 +92,15 @@ Everything here landed after `2.0.0rc1` and will ship in `2.0.0`.
   converted them, so a value it could not serialize left a truncated file that reads as a valid
   parameter file with fewer sets, and an existing CSV at that path was overwritten before the
   failure. Every row is now converted before the file is written. ([#102])
+- A message that spans several stderr lines arrives whole rather than losing every line after
+  the first. `echo()` renders a `\n` inside a string as a real newline, and an assertion
+  renders its message the same way, so both `ECHO:` and `ERROR:` can run onto lines that carry
+  no group name — which the reader matched on, and so dropped. A failed assertion lost its
+  message and the file and line with it, keeping only `ERROR: Assertion 'false' failed: "`
+  and the first line. A continuation that itself begins with a group name is still read as a
+  diagnostic in its own right, because OpenSCAD's output carries nothing that distinguishes
+  the two; that trade is deliberate, since an invented error is visible and a suppressed one
+  is not. `TRACE:` is unaffected: it escapes the newline. ([#106])
 
 ### Security
 
@@ -199,3 +208,4 @@ does not know.
 [#102]: https://github.com/CameronBrooks11/scadbatch/pull/102
 [#103]: https://github.com/CameronBrooks11/scadbatch/pull/103
 [#105]: https://github.com/CameronBrooks11/scadbatch/pull/105
+[#106]: https://github.com/CameronBrooks11/scadbatch/pull/106
