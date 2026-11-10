@@ -248,19 +248,6 @@ def test_a_conversion_says_which_encoding_it_read(direction, tmp_path, no_dialog
     assert kind == "showinfo" and "cp1252" in message
 
 
-@pytest.fixture
-def window():
-    """A real Tk root, where one can be had. Nothing above this needs a display; this does."""
-    tk = pytest.importorskip("tkinter")
-    try:
-        root = tk.Tk()
-    except tk.TclError as e:
-        pytest.skip(f"no display: {e}")
-    root.withdraw()
-    yield root
-    root.destroy()
-
-
 def test_the_window_builds_with_the_encoding_field(window):
     """The stand-in above cannot see a layout mistake -- a duplicated grid cell, a widget
     left out of state_widgets. CI runs the suite under xvfb on one job, which is where this

@@ -104,3 +104,17 @@ def fake_openscad(tmp_path):
         exe.write_text(f'#!/bin/sh\nexec "{sys.executable}" "{script}" "$@"\n')
         exe.chmod(exe.stat().st_mode | stat.S_IXUSR)
     return str(exe)
+
+
+@pytest.fixture
+def window():
+    """A real Tk root, where one can be had. Only the tests that build real widgets need
+    this; it lives here because more than one GUI module wants it."""
+    tk = pytest.importorskip("tkinter")
+    try:
+        root = tk.Tk()
+    except tk.TclError as e:
+        pytest.skip(f"no display: {e}")
+    root.withdraw()
+    yield root
+    root.destroy()

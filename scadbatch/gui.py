@@ -1,7 +1,7 @@
 # scadbatch/gui.py
 
 """
-Graphical User Interface (GUI) for the OpenSCAD Batch Exporter.
+Graphical User Interface (GUI) for scadbatch.
 
 This GUI allows users to configure batch exports of STL files from OpenSCAD using CSV or
 JSON parameters. It exports STL only -- the command line covers the other formats OpenSCAD
@@ -27,11 +27,17 @@ from tkinter import filedialog, messagebox, ttk
 
 from scadbatch import batch_export, csv_to_json, json_to_csv
 from scadbatch.params import DEFAULT_ENCODING, normalize_encoding
+from scadbatch.runner import _TOOL_NAME
+
+# Built from the name the run summary already records, so the two cannot disagree and
+# a rename has one place to change. A module-level constant rather than a literal in
+# __init__ is also the only shape a test can read where there is no display (#89).
+WINDOW_TITLE = f"{_TOOL_NAME} - batch export"
 
 
 class OpenSCADBatchExporterGUI:
     """
-    Main GUI class for the OpenSCAD Batch Exporter.
+    Main GUI class for scadbatch.
 
     Handles the creation and management of all GUI components and user interactions.
     """
@@ -44,7 +50,7 @@ class OpenSCADBatchExporterGUI:
             master (tk.Tk): The root Tkinter window.
         """
         self.master = master
-        master.title("OpenSCAD Batch Exporter")
+        master.title(WINDOW_TITLE)
         master.geometry("1000x750")
         master.resizable(True, True)
 
@@ -59,7 +65,11 @@ class OpenSCADBatchExporterGUI:
 
         # Configure grid within the main frame
         main_frame.columnconfigure(1, weight=1)
-        main_frame.rowconfigure(10, weight=1)
+        # The children are rows 0-4 and the log frame is the one meant to absorb the
+        # slack. Row 10 holds nothing, so the log got its requested height and no more
+        # and resizing the window taller did not enlarge it (#61).
+        main_frame.rowconfigure(4, weight=1)
+        self.main_frame = main_frame
 
         # Variables
         self.scad_file = tk.StringVar()
