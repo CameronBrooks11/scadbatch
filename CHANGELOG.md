@@ -26,8 +26,16 @@ Everything here landed after `2.0.0rc1` and will ship in `2.0.0`.
   after the project. It was `"openscad_batch_export": "<version>"`, the pre-rename name from
   before 2.0.0rc1, and is now `"tool": {"name": "scadbatch", "version": "<version>"}`. Keying by
   role means a consumer reads which tool wrote the summary instead of having to know the key,
-  and a future rename cannot move it; it also matches the `openscad` sibling, already an object
-  with its own path and version. `2.0.0rc1` is the only release that wrote the old key. ([#90])
+  and a future rename cannot move it; it also matches the `engine` block beside it, already an
+  object with its own path and version. `2.0.0rc1` is the only release that wrote the old key.
+  ([#90])
+- The `--summary` JSON records the renderer under an `engine` block rather than under
+  `openscad`, and that block now carries a `name`. It was
+  `"openscad": {"path": ..., "version": ...}` and is now
+  `"engine": {"name": "openscad", "path": ..., "version": ...}`. This is the same argument as
+  the entry above, applied to the sibling that entry cited as the shape to match: keyed by
+  role, with the product name as data, so a consumer reads what rendered without knowing the
+  key. `2.0.0rc1` is the only release that wrote the old key. ([#104])
 - A blank or whitespace-only CSV cell now leaves that parameter unset, so the model's own
   default applies, instead of passing the empty string. OpenSCAD cannot read `""` as a number:
   it warns, falls back and still exits 0, so the previous behaviour built a model the row never
@@ -190,3 +198,4 @@ does not know.
 [#94]: https://github.com/CameronBrooks11/scadbatch/pull/94
 [#102]: https://github.com/CameronBrooks11/scadbatch/pull/102
 [#103]: https://github.com/CameronBrooks11/scadbatch/pull/103
+[#104]: https://github.com/CameronBrooks11/scadbatch/pull/104

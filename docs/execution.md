@@ -85,7 +85,8 @@ lines.
     "version": "2.0.0rc1"
   },
   "started_at": "2026-10-14T03:35:01+00:00",
-  "openscad": {
+  "engine": {
+    "name": "openscad",
     "path": "/usr/bin/openscad",
     "version": "2026.08.01"
   },
@@ -134,9 +135,11 @@ to `.<name>.part.<ext>` and is renamed on success, so an interrupted or failed r
 truncated file where a finished one should be. A dry-run summary records the final path, since
 nothing is written.
 
-Recording the OpenSCAD path and version is the point of the `openscad` block: the same parameter
-file and the same model produce different geometry across OpenSCAD releases, so a result without
-the engine version is not reproducible.
+Recording the path and version is the point of the `engine` block: the same parameter file and
+the same model produce different geometry across OpenSCAD releases, so a result without the
+engine version is not reproducible. Like `tool`, it is keyed by role and carries the product
+name as data, so a reader can answer what produced a run, and with what, without knowing
+either key in advance.
 
 `tool.version` is read from the installed distribution's metadata, so it is `null` when scadbatch
 runs from a source tree rather than an install. `tool.name` is always there.

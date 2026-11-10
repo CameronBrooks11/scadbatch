@@ -148,7 +148,11 @@ def test_to_dict_records_engine_inputs_and_every_case(
     )
     doc = result.to_dict()
 
-    assert doc["openscad"] == {"path": fake_openscad, "version": "2021.01"}
+    assert doc["engine"] == {
+        "name": "openscad",
+        "path": fake_openscad,
+        "version": "2021.01",
+    }
     assert doc["inputs"]["scad_file"] == SCAD
     assert doc["inputs"]["parameter_file"] == params_csv
     assert doc["inputs"]["formats"] == ["stl", "png"]
@@ -162,6 +166,7 @@ def test_to_dict_records_engine_inputs_and_every_case(
     assert doc["tool"]["name"] == "scadbatch"
     assert set(doc["tool"]) == {"name", "version"}
     assert "openscad_batch_export" not in doc  # the pre-rename key is gone, not aliased
+    assert "openscad" not in doc  # and so is the engine block keyed by product name
     statuses = [(r["name"], r["format"], r["status"]) for r in doc["results"]]
     assert statuses == [
         ("first", "stl", "ok"),
@@ -230,7 +235,7 @@ def test_cli_summary_flag_writes_the_json_record(fake_openscad, params_csv, tmp_
     assert code == 1  # one case fails; the summary is still written
     doc = json.loads(summary.read_text())
     assert doc["counts"] == {"ok": 1, "failed": 1, "timeout": 0, "skipped": 0, "errors": 0}
-    assert doc["openscad"]["version"] == "2021.01"
+    assert doc["engine"]["version"] == "2021.01"
     assert f"Summary written to {summary}" in capsys.readouterr().out
 
 
