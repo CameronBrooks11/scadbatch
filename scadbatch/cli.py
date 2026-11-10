@@ -12,9 +12,38 @@ import logging
 import os
 import sys
 
-from scadbatch.engine import OpenSCADError
+from scadbatch.engine import OpenSCADError, OpenSCADNotFound, detect_engine
 from scadbatch.params import DEFAULT_ENCODING, csv_to_json, json_to_csv
-from scadbatch.runner import batch_export
+from scadbatch.runner import _TOOL_NAME, _tool_version, batch_export
+
+
+class _VersionAction(argparse.Action):
+    """``--version``: this tool's version, and the OpenSCAD a run here would pick.
+
+    Both halves are what a bug report needs, and the engine half cannot be read off the
+    install: which build answers depends on PATH and on $OPENSCAD, and the same test can
+    pass against one and fail against another (#68).
+
+    Resolving an engine is I/O and can fail, so the tool line is printed either way and a
+    failure is reported on the engine line rather than as a non-zero exit. A version flag
+    that exits 1 because OpenSCAD is missing would be worse than the question it answers.
+    An ordinary run is unaffected: this resolves only when the flag is given.
+    """
+
+    def __init__(self, option_strings, dest, **kwargs):
+        super().__init__(option_strings, dest, nargs=0, **kwargs)
+
+    def __call__(self, parser, namespace, values, option_string=None):
+        print(f"{_TOOL_NAME} {_tool_version() or 'unknown (not installed)'}")
+        try:
+            engine = detect_engine()
+        except OpenSCADNotFound:
+            print("openscad: not found")
+        except OpenSCADError as e:
+            print(f"openscad: {e}")
+        else:
+            print(f"openscad {engine.version} ({engine.path})")
+        parser.exit()
 
 
 def parse_arguments(argv=None):
@@ -38,6 +67,11 @@ def parse_arguments(argv=None):
         "--verbose",
         action="store_true",
         help="Show the OpenSCAD command line for each export.",
+    )
+    parser.add_argument(
+        "--version",
+        action=_VersionAction,
+        help="Show the scadbatch version and the OpenSCAD it would use, then exit.",
     )
     subparsers = parser.add_subparsers(dest="command", required=True, help="Sub-commands")
 

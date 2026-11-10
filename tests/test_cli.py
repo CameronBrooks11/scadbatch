@@ -4,6 +4,7 @@ import re
 import pytest
 
 from scadbatch.cli import main, parse_arguments
+from scadbatch.runner import _tool_version
 
 
 @pytest.fixture
@@ -294,3 +295,59 @@ def test_export_positionals_do_not_single_out_one_output_format(capsys):
     assert not _format_names_in(positionals), (
         f"export --help positionals name {_format_names_in(positionals)}"
     )
+
+
+# --version reports the tool and the engine, because both halves are what a bug report
+# needs and the engine half cannot be read off the install: which build answers depends
+# on PATH and on $OPENSCAD (#68, #79).
+
+
+def _version_output(argv, capsys):
+    with pytest.raises(SystemExit) as exc:
+        main(argv)
+    return exc.value.code, capsys.readouterr().out
+
+
+def test_version_reports_the_tool_and_the_engine(fake_openscad, monkeypatch, capsys):
+    monkeypatch.setenv("OPENSCAD", fake_openscad)
+
+    code, out = _version_output(["--version"], capsys)
+
+    assert code == 0
+    tool, engine = out.splitlines()
+    assert tool.startswith("scadbatch ")
+    assert engine == f"openscad 2021.01 ({fake_openscad})"
+
+
+def test_version_still_reports_the_tool_when_no_engine_is_installed(monkeypatch, tmp_path, capsys):
+    """A version flag that exits non-zero because OpenSCAD is missing is worse than useless."""
+    monkeypatch.delenv("OPENSCAD", raising=False)
+    monkeypatch.setenv("PATH", str(tmp_path))
+    monkeypatch.setattr("scadbatch.engine.PLATFORM_DEFAULTS", {})
+
+    code, out = _version_output(["--version"], capsys)
+
+    assert code == 0
+    assert out.splitlines() == [
+        f"scadbatch {_tool_version() or 'unknown (not installed)'}",
+        "openscad: not found",
+    ]
+
+
+def test_version_needs_no_subcommand(fake_openscad, monkeypatch, capsys):
+    """`command` is a required subparser, so the flag has to short-circuit before that check."""
+    monkeypatch.setenv("OPENSCAD", fake_openscad)
+
+    code, _ = _version_output(["--version"], capsys)
+
+    assert code == 0  # not 2, which is argparse's "the following arguments are required"
+
+
+def test_an_ordinary_run_does_not_resolve_an_engine_for_the_version_flag(monkeypatch):
+    """The lookup is I/O: it must happen only when --version is given, not on every parse."""
+    called = []
+    monkeypatch.setattr("scadbatch.cli.detect_engine", lambda *a, **k: called.append(1))
+
+    parse_arguments(["export", "m.scad", "p.csv", "out"])
+
+    assert called == []
