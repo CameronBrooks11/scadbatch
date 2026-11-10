@@ -36,6 +36,11 @@ log = logging.getLogger("scadbatch")
 # mismatch is only visible against a real install.
 _TOOL_NAME = "scadbatch"
 
+# The engine's product name, recorded as data beside its path and version for the
+# same reason. A literal, because Engine resolves a path and a version but no
+# product name, and OpenSCAD is the only renderer this tool drives.
+_ENGINE_NAME = "openscad"
+
 
 class _ActiveProcesses:
     """OpenSCAD processes currently running, so an interrupt can terminate them.
@@ -163,13 +168,18 @@ class BatchResult:
     def to_dict(self):
         """JSON-serialisable record of the whole batch: engine, inputs, per-case results."""
         return {
-            # Keyed by role, not by the tool's own name: a consumer reads the name from
-            # the record rather than having to know it, and a rename cannot move the key.
+            # Both blocks are keyed by role and carry the product name as data: a
+            # consumer reads what produced the run, and with what, rather than having
+            # to know either key, and a rename cannot move one.
             "tool": {"name": _TOOL_NAME, "version": _tool_version()},
             "started_at": self.started_at,
-            "openscad": None
+            "engine": None
             if self.engine is None
-            else {"path": self.engine.path, "version": self.engine.version},
+            else {
+                "name": _ENGINE_NAME,
+                "path": self.engine.path,
+                "version": self.engine.version,
+            },
             "inputs": self.inputs,
             "dry_run": self.dry_run,
             "total_duration": self.total_duration,
