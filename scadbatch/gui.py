@@ -68,7 +68,7 @@ class OpenSCADBatchExporterGUI:
         # The children are rows 0-4 and the log frame is the one meant to absorb the
         # slack. Row 10 holds nothing, so the log got its requested height and no more
         # and resizing the window taller did not enlarge it (#61).
-        main_frame.rowconfigure(4, weight=1)
+        main_frame.rowconfigure(10, weight=1)
         self.main_frame = main_frame
 
         # Variables
