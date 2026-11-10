@@ -152,3 +152,5 @@ pyinstaller_build/
 
 # Claude Code harness state (not project files)
 .claude/
+# mdbook's rendered output; the site is built in CI, not committed.
+book/
