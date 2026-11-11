@@ -125,6 +125,10 @@ Everything here landed after `2.0.0rc1` and will ship in `2.0.0`.
   caught it: `json2csv` on a hand-written file printed a traceback, and the export path
   would have done the same. It now says the value nests too deeply, the way reading such
   a file already did. ([#108])
+- `.gitignore` covers exported PNGs. Every other output format was ignored, but png only
+  as `output_*.png`, a prefix this tool never writes — output is named from
+  `exported_filename`. A run of `stl, png` left the images loose in the tree while the
+  meshes disappeared. The paper's figures are excepted, since they are tracked. ([#115])
 - The GUI's content fills the width of the window. The window gave column 1 three times
   the weight of column 0 while placing its only child in column 0, so widening the window
   handed three quarters of the new space to a column holding nothing and left the content
