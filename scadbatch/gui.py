@@ -3,14 +3,16 @@
 """
 Graphical User Interface (GUI) for scadbatch.
 
-This GUI allows users to configure batch exports of STL files from OpenSCAD using CSV or
-JSON parameters. It exports STL only -- the command line covers the other formats OpenSCAD
-can write.
-It also provides functionalities to convert parameter files between CSV and JSON formats.
+This GUI allows users to configure batch exports from OpenSCAD using CSV or JSON
+parameters, in any format OpenSCAD can write, and to convert parameter files between CSV
+and JSON.
+
+The command line still covers what this window does not: parallelism beyond the sequential
+toggle, dry runs, timeouts, the run summary, name templates and the image options.
 
 Features:
 - Browse and select OpenSCAD files, parameter files, and output directories.
-- Choose the STL flavour and specify selection criteria.
+- Choose the output formats and the STL flavour, and specify selection criteria.
 - Monitor export progress and view logs.
 - Convert between CSV and JSON parameter files.
 - Access comprehensive help documentation.
@@ -33,6 +35,20 @@ from scadbatch.runner import _TOOL_NAME
 # a rename has one place to change. A module-level constant rather than a literal in
 # __init__ is also the only shape a test can read where there is no display (#89).
 WINDOW_TITLE = f"{_TOOL_NAME} - batch export"
+
+
+def parse_formats(text):
+    """Split the output-format field into the list ``batch_export`` takes.
+
+    Only splitting and discarding blanks. The runner lowercases, strips a leading dot
+    and de-duplicates, and warns about a format the engine does not advertise rather
+    than refusing it -- the advertised list understates what a build accepts. Repeating
+    any of that here would reject formats that work.
+
+    An empty field yields an empty list, so the runner's own "At least one output
+    format is required" surfaces instead of this quietly exporting STL.
+    """
+    return [part.strip() for part in text.split(",") if part.strip()]
 
 
 class OpenSCADBatchExporterGUI:
@@ -77,6 +93,7 @@ class OpenSCADBatchExporterGUI:
         self.parameter_encoding = tk.StringVar()
         self.output_folder = tk.StringVar()
         self.openscad_path = tk.StringVar(value="")
+        self.output_formats = tk.StringVar(value="stl")
         self.export_format = tk.StringVar(value="binstl")
         self.selection = tk.StringVar()
         self.sequential = tk.BooleanVar()
@@ -159,9 +176,23 @@ class OpenSCADBatchExporterGUI:
         # Configure grid within settings_frame
         settings_frame.columnconfigure(1, weight=1)
 
-        # Export Format
-        ttk.Label(settings_frame, text="Export Format:").grid(
+        # Output Formats
+        ttk.Label(settings_frame, text="Output Formats:").grid(
             row=0, column=0, sticky=tk.W, padx=5, pady=5
+        )
+        self.formats_entry = ttk.Entry(settings_frame, textvariable=self.output_formats)
+        self.formats_entry.grid(row=0, column=1, columnspan=2, sticky=tk.EW, padx=5, pady=5)
+        self.state_widgets.append(self.formats_entry)
+        ttk.Label(
+            settings_frame,
+            text="one or more, comma separated, e.g. 'stl, png'",
+            foreground="gray",
+        ).grid(row=0, column=3, sticky=tk.W, padx=5, pady=5)
+
+        # STL flavour -- not the output format; it is the --export-format value, which the
+        # runner applies only to the stl output and ignores for every other one.
+        ttk.Label(settings_frame, text="STL Flavour:").grid(
+            row=1, column=0, sticky=tk.W, padx=5, pady=5
         )
         export_format_menu = ttk.Combobox(
             settings_frame,
@@ -169,27 +200,27 @@ class OpenSCADBatchExporterGUI:
             values=["asciistl", "binstl"],
             state="readonly",
         )
-        export_format_menu.grid(row=0, column=1, sticky=tk.W, padx=5, pady=5)
+        export_format_menu.grid(row=1, column=1, sticky=tk.W, padx=5, pady=5)
         export_format_menu.current(1)  # Default to binstl
         self.state_widgets.append(export_format_menu)
 
         # Selection
         ttk.Label(settings_frame, text="Selection:").grid(
-            row=1, column=0, sticky=tk.W, padx=5, pady=5
+            row=2, column=0, sticky=tk.W, padx=5, pady=5
         )
         self.selection_entry = ttk.Entry(settings_frame, textvariable=self.selection)
-        self.selection_entry.grid(row=1, column=1, columnspan=2, sticky=tk.EW, padx=5, pady=5)
+        self.selection_entry.grid(row=2, column=1, columnspan=2, sticky=tk.EW, padx=5, pady=5)
         self.state_widgets.append(self.selection_entry)
         selection_info = "e.g., '0-5', '1-3,7,10-12', 'every:2 in 0-10', 'from:5', 'up_to:4'"
         ttk.Label(settings_frame, text=selection_info, foreground="gray").grid(
-            row=1, column=3, sticky=tk.W, padx=5, pady=5
+            row=2, column=3, sticky=tk.W, padx=5, pady=5
         )
 
         # Sequential Processing
         self.seq_check = ttk.Checkbutton(
             settings_frame, text="Sequential Processing", variable=self.sequential
         )
-        self.seq_check.grid(row=2, column=1, sticky=tk.W, padx=5, pady=5)
+        self.seq_check.grid(row=3, column=1, sticky=tk.W, padx=5, pady=5)
         self.state_widgets.append(self.seq_check)
 
         # === Progress and Status Frame ===
@@ -393,6 +424,7 @@ class OpenSCADBatchExporterGUI:
         output = self.output_folder.get()
         openscad = self.openscad_path.get()
         fmt = self.export_format.get()
+        formats = parse_formats(self.output_formats.get())
         sel = self.selection.get()
         seq = self.sequential.get()
 
@@ -430,13 +462,13 @@ class OpenSCADBatchExporterGUI:
         # Start export in a separate thread to keep GUI responsive
         self.export_thread = threading.Thread(
             target=self.run_export,
-            args=(scad, param, output, openscad, fmt, sel, seq, encoding),
+            args=(scad, param, output, openscad, fmt, sel, seq, encoding, formats),
             daemon=True,
         )
         self.export_thread.start()
         self.master.after(100, self.update_progress)
 
-    def run_export(self, scad, param, output, openscad, fmt, sel, seq, encoding):
+    def run_export(self, scad, param, output, openscad, fmt, sel, seq, encoding, formats):
         """
         Execute the batch export process and handle exceptions.
 
@@ -445,10 +477,11 @@ class OpenSCADBatchExporterGUI:
             param (str): Path to the parameter file (CSV or JSON).
             output (str): Output directory for the exported files.
             openscad (str): Path to the OpenSCAD executable.
-            fmt (str): Export format ('asciistl' or 'binstl').
+            fmt (str): STL flavour ('asciistl' or 'binstl'), applied to stl output only.
             sel (str): Selection string for parameter sets.
             seq (bool): Whether to process exports sequentially.
             encoding (str): Text encoding of the parameter file.
+            formats (list of str): Output formats, one file per parameter set per format.
         """
         handler = GuiLogHandler(self)
         logger = logging.getLogger("scadbatch")
@@ -456,7 +489,9 @@ class OpenSCADBatchExporterGUI:
         if logger.level == logging.NOTSET or logger.level > logging.INFO:
             logger.setLevel(logging.INFO)
         try:
-            result = batch_export(scad, param, output, openscad, fmt, sel, seq, encoding=encoding)
+            result = batch_export(
+                scad, param, output, openscad, fmt, sel, seq, formats=formats, encoding=encoding
+            )
             self.append_log(result.summary())
         except Exception as e:
             self.append_log(f"An error occurred: {str(e)}")

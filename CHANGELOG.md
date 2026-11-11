@@ -55,6 +55,10 @@ Everything here landed after `2.0.0rc1` and will ship in `2.0.0`.
 
 ### Changed
 
+- The GUI's **Export Format** control is now labelled **STL Flavour**. It sets
+  `--export-format`, which is the STL flavour and not the output format, and the runner
+  applies it only to `stl` output. With an output-format field beside it the old label
+  named the wrong thing twice. ([#113])
 - `--help` no longer describes the tool as an STL exporter. #36 made the output format
   arbitrary, but the top-level description, the `export` subcommand's help and the
   `output_folder` text all still said STL, which contradicted the README. The wording now names
@@ -63,6 +67,14 @@ Everything here landed after `2.0.0rc1` and will ship in `2.0.0`.
 
 ### Added
 
+- An **Output Formats** field in the GUI, so the window is no longer STL-only. It was not
+  a missing control so much as a missing argument: `formats` was never passed to
+  `batch_export`, so every run took its `("stl",)` default whatever else was set. The field
+  takes one or more extensions, comma separated, and is passed through as typed — the
+  runner already lowercases, strips a leading dot and de-duplicates, and warns rather than
+  refuses when a build does not advertise a format, because that list understates what it
+  accepts. An empty field is passed through too, so the runner's own refusal is what the
+  user sees rather than a silent export to STL. ([#113])
 - `scadbatch --version`, which prints this tool's version and the OpenSCAD a run here would
   use, then exits 0. Previously there was no flag at all: `-v` is `--verbose`, so `--version`
   printed a usage error and exited 2, and the version had to come from `pip show` or a
@@ -230,3 +242,4 @@ does not know.
 [#107]: https://github.com/CameronBrooks11/scadbatch/pull/107
 [#108]: https://github.com/CameronBrooks11/scadbatch/pull/108
 [#110]: https://github.com/CameronBrooks11/scadbatch/pull/110
+[#113]: https://github.com/CameronBrooks11/scadbatch/pull/113

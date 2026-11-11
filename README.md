@@ -89,8 +89,10 @@ progress messages the CLI prints.
 scadbatch gui
 ```
 
-Select the `.scad` file, the parameter file and an output folder; set the format, a selection
-range and the parameter file's encoding; watch the log; and convert between CSV and JSON.
+Select the `.scad` file, the parameter file and an output folder; set the output formats, the
+STL flavour, a selection range and the parameter file's encoding; watch the log; and convert
+between CSV and JSON. The command line still covers dry runs, timeouts, parallelism, the run
+summary, name templates and the image options.
 
 ## Documentation
 

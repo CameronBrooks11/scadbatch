@@ -5,6 +5,8 @@ import textwrap
 
 import pytest
 
+from scadbatch import gui as gui_module
+
 FAKE_OPENSCAD = textwrap.dedent(
     """\
     import sys
@@ -118,3 +120,16 @@ def window():
     root.withdraw()
     yield root
     root.destroy()
+
+
+@pytest.fixture
+def no_dialogs(monkeypatch):
+    """Collect what would have been shown, so nothing tries to open a window."""
+    shown = []
+    for kind in ("showerror", "showinfo"):
+        monkeypatch.setattr(
+            gui_module.messagebox,
+            kind,
+            lambda title, message, kind=kind: shown.append((kind, message)),
+        )
+    return shown

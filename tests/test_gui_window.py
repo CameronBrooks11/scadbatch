@@ -46,3 +46,25 @@ def test_the_window_title_is_actually_set(window):
     Gui(window)
 
     assert window.title() == WINDOW_TITLE
+
+
+def test_the_settings_rows_moved_down_rather_than_onto_each_other(window):
+    """The output-format field took row 0, so the flavour, selection and sequential rows
+    each moved down one. A widget left behind would land on top of another (#97).
+
+    Every cell the frame hands out must be distinct, whoever asked for it -- naming three
+    widgets would miss a collision with a label, which is a local in __init__.
+    """
+    app = Gui(window)
+    frame = app.formats_entry.master
+
+    cells = []
+    for child in frame.grid_slaves():
+        placed = child.grid_info()
+        row, column = int(placed["row"]), int(placed["column"])
+        cells.extend((row, column + offset) for offset in range(int(placed["columnspan"])))
+
+    assert len(cells) == len(set(cells)), sorted(c for c in cells if cells.count(c) > 1)
+    assert int(app.formats_entry.grid_info()["row"]) == 0
+    assert int(app.selection_entry.grid_info()["row"]) == 2
+    assert int(app.seq_check.grid_info()["row"]) == 3
