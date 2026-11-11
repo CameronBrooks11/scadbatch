@@ -1,5 +1,9 @@
 # scadbatch
 
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.24122494.svg)](https://doi.org/10.5281/zenodo.24122494)
+[![PyPI](https://img.shields.io/pypi/v/scadbatch)](https://pypi.org/project/scadbatch/)
+[![Test](https://github.com/CameronBrooks11/scadbatch/actions/workflows/test.yml/badge.svg)](https://github.com/CameronBrooks11/scadbatch/actions/workflows/test.yml)
+
 Batch export models from parametric OpenSCAD designs using CSV or Customizer JSON parameter
 sets.
 
