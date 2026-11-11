@@ -113,9 +113,11 @@ is updated to match.
 
 7. **Zenodo.** With the Zenodo–GitHub integration enabled for the repository, publishing the
    GitHub release archives it and mints a DOI: one for the version plus a concept DOI covering
-   all versions. Put the concept DOI in `CITATION.cff` and the README badge. This is the step
-   that is not automated and not yet done — `CITATION.cff` carries a commented-out `doi:` field
-   for it, and the integration has to be switched on first.
+   all versions. Put the **concept** DOI in `CITATION.cff` and the README badge: it resolves to
+   the newest archived release, where a version DOI freezes a reader on the one they found.
+   This is the step that is not automated. Done for 2.0.0 — concept `10.5281/zenodo.24122494`,
+   version `10.5281/zenodo.24122495` — so a later release only needs the badge checked, since
+   the concept DOI does not change.
 
 ## Rehearsing without spending a version
 
