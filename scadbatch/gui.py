@@ -75,6 +75,7 @@ class OpenSCADBatchExporterGUI:
         # on column 1 gave three quarters of every new pixel of width to a column holding
         # nothing, leaving the content stranded at part of the window (#114, #61's twin).
         master.columnconfigure(0, weight=1)
+        master.columnconfigure(1, weight=3)
         master.rowconfigure(0, weight=1)
 
         # Main Frame
