@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "scadbatch"
-version = "2.0.0rc1"
+version = "2.0.0"
 description = "Batch export models from parametric OpenSCAD designs using CSV or Customizer JSON parameter sets."
 readme = "README.md"
 license = "AGPL-3.0-or-later"

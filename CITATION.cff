@@ -18,8 +18,8 @@ authors:
 repository-code: https://github.com/CameronBrooks11/scadbatch
 url: https://github.com/CameronBrooks11/scadbatch
 license: AGPL-3.0-or-later
-version: 2.0.0rc1
-date-released: "2026-09-28"
+version: 2.0.0
+date-released: "2026-11-10"
 keywords:
   - OpenSCAD
   - parametric design

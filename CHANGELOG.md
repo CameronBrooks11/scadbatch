@@ -18,7 +18,9 @@ produces is something a user gets.
 
 ## [Unreleased]
 
-Everything here landed after `2.0.0rc1` and will ship in `2.0.0`.
+## [2.0.0] — 2026-11-10
+
+Everything here landed after `2.0.0rc1`.
 
 ### Changed — breaking
 
@@ -206,7 +208,8 @@ does not know.
 <!-- Contributions from outside the maintainer are credited on the pull requests linked above;
      #64 is from @Jah-yee. -->
 
-[Unreleased]: https://github.com/CameronBrooks11/scadbatch/compare/v2.0.0rc1...HEAD
+[Unreleased]: https://github.com/CameronBrooks11/scadbatch/compare/v2.0.0...HEAD
+[2.0.0]: https://github.com/CameronBrooks11/scadbatch/releases/tag/v2.0.0
 [2.0.0rc1]: https://github.com/CameronBrooks11/scadbatch/releases/tag/v2.0.0rc1
 [1.1.0]: https://github.com/CameronBrooks11/scadbatch/releases/tag/v1.1.0
 [1.0.0]: https://github.com/CameronBrooks11/scadbatch/releases/tag/v1.0.0
