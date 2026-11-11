@@ -81,8 +81,11 @@ pip-delete-this-directory.txt
 *.ast
 *.nefdbg
 
-# Rendered output files
-output_*.png
+# Rendered output files. scadbatch names output from exported_filename, so it writes
+cube_small.png and never output_*.png, which left png the one format not ignored.
+*.png
+# except the paper's figures, which are tracked
+!paper/*.png
 
 # -----------------------------
 # IDE/Editor files

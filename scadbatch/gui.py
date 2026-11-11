@@ -70,9 +70,11 @@ class OpenSCADBatchExporterGUI:
         master.geometry("1000x750")
         master.resizable(True, True)
 
-        # Configure grid for the main window
+        # Configure grid for the main window. main_frame below is the only child, and it
+        # is in column 0, so column 0 and row 0 are the ones that take the slack. A weight
+        # on column 1 gave three quarters of every new pixel of width to a column holding
+        # nothing, leaving the content stranded at part of the window (#114, #61's twin).
         master.columnconfigure(0, weight=1)
-        master.columnconfigure(1, weight=3)
         master.rowconfigure(0, weight=1)
 
         # Main Frame
