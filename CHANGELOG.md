@@ -125,6 +125,10 @@ Everything here landed after `2.0.0rc1` and will ship in `2.0.0`.
   caught it: `json2csv` on a hand-written file printed a traceback, and the export path
   would have done the same. It now says the value nests too deeply, the way reading such
   a file already did. ([#108])
+- The GUI's content fills the width of the window. The window gave column 1 three times
+  the weight of column 0 while placing its only child in column 0, so widening the window
+  handed three quarters of the new space to a column holding nothing and left the content
+  stranded at part of the width. ([#115])
 - The GUI's log pane grows with the window. The main frame reserved its vertical slack for
   row 10, which holds nothing — the children are rows 0 to 4 — so the log got its requested
   height and no more, and making the window taller did not enlarge it. ([#110])
@@ -243,3 +247,4 @@ does not know.
 [#108]: https://github.com/CameronBrooks11/scadbatch/pull/108
 [#110]: https://github.com/CameronBrooks11/scadbatch/pull/110
 [#113]: https://github.com/CameronBrooks11/scadbatch/pull/113
+[#115]: https://github.com/CameronBrooks11/scadbatch/pull/115

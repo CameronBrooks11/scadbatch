@@ -68,3 +68,25 @@ def test_the_settings_rows_moved_down_rather_than_onto_each_other(window):
     assert int(app.formats_entry.grid_info()["row"]) == 0
     assert int(app.selection_entry.grid_info()["row"]) == 2
     assert int(app.seq_check.grid_info()["row"]) == 3
+
+
+def test_only_the_column_holding_the_content_takes_the_width(window):
+    """The horizontal twin of the row above. The window gave column 1 three times the
+    weight of column 0 while placing its only child in column 0, so widening the window
+    handed three quarters of the new space to a column holding nothing (#114).
+
+    Found against the column the frame actually occupies, so moving the frame without
+    moving the weight fails here.
+    """
+    app = Gui(window)
+
+    content_column = int(app.main_frame.grid_info()["column"])
+    assert window.grid_columnconfigure(content_column)["weight"] == 1
+
+    # And no other column claims a share, which is what stranded the content.
+    weighted = [
+        column
+        for column in range(6)
+        if window.grid_columnconfigure(column)["weight"] and column != content_column
+    ]
+    assert weighted == []
