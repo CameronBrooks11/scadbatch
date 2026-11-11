@@ -8,86 +8,11 @@ and whether it reaches the three calls -- and not the layout.
 import json
 
 import pytest
+from gui_stubs import FakeGui, Summary
 
 from scadbatch import gui as gui_module
 from scadbatch.gui import OpenSCADBatchExporterGUI as Gui
 from scadbatch.params import DEFAULT_ENCODING
-
-
-class Field:
-    """Stands in for a tk.StringVar."""
-
-    def __init__(self, value=""):
-        self.value = value
-
-    def get(self):
-        return self.value
-
-
-class FakeGui:
-    """Stands in for the window: the attributes the worker methods touch, and nothing else."""
-
-    def __init__(self, encoding="", **paths):
-        self.parameter_encoding = Field(encoding)
-        self.scad_file = Field(paths.get("scad", ""))
-        self.parameter_file = Field(paths.get("param", ""))
-        self.output_folder = Field(paths.get("output", ""))
-        self.openscad_path = Field("")
-        self.export_format = Field("binstl")
-        self.selection = Field("")
-        self.sequential = Field(False)
-        self.progress = {}
-        self.log = []
-        self.status_label = self
-        self.enabled = False
-        self.threads = []
-
-    # start_export disables the controls, starts a thread and schedules a poll; a stand-in
-    # records the thread rather than running it, so the test sees what it would have run.
-    def disable_controls(self):
-        self.enabled = False
-
-    def after(self, _delay, _callback):
-        pass
-
-    def update_progress(self):
-        pass
-
-    master = property(lambda self: self)
-
-    def append_log(self, message):
-        self.log.append(message)
-
-    def enable_controls(self):
-        self.enabled = True
-
-    def config(self, **kwargs):
-        pass
-
-    # the real resolver and the real guard, so these tests exercise them rather than a copy
-    chosen_encoding = Gui.chosen_encoding
-    is_executable = Gui.is_executable
-    run_export = Gui.run_export
-
-
-class Summary:
-    """Stands in for the BatchResult the GUI logs."""
-
-    def summary(self):
-        return "nothing to report"
-
-
-@pytest.fixture
-def no_dialogs(monkeypatch):
-    """Collect what would have been shown, so nothing tries to open a window."""
-    shown = []
-    for kind in ("showerror", "showinfo"):
-        monkeypatch.setattr(
-            gui_module.messagebox,
-            kind,
-            lambda title, message, kind=kind: shown.append((kind, message)),
-        )
-    return shown
 
 
 def test_a_blank_field_means_the_default_encoding(no_dialogs):
@@ -202,7 +127,9 @@ def test_export_passes_the_encoding_to_batch_export(monkeypatch, no_dialogs):
 
     monkeypatch.setattr(gui_module, "batch_export", fake_batch_export)
 
-    Gui.run_export(FakeGui(), "m.scad", "p.csv", "out", None, "binstl", None, False, "cp1252")
+    Gui.run_export(
+        FakeGui(), "m.scad", "p.csv", "out", None, "binstl", None, False, "cp1252", ["stl"]
+    )
 
     assert captured["encoding"] == "cp1252"
 
