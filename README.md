@@ -171,7 +171,7 @@ Models and projects this has been used on:
 - **[SnapTessSCAD](https://github.com/uwo-fast/SnapTessSCAD)**
 - **[Open Source Nasopharyngeal Swab and UV Curing System](https://github.com/uwo-fast/OpenNasopharyngealSwab)** —
   [HardwareX paper](https://www.hardware-x.com/article/S2468-0672(20)30044-4/fulltext)
-- **[Customizable Christmas Name Ornament](https://github.com/CameronBrooks11/ChristmasNameOrnament/)** —
+- **[Customizable Christmas Name Ornament](https://github.com/CameronBrooks11/christmas-name-ornament/)** —
   after [the original by Lyl3](https://www.thingiverse.com/thing:4681765)
 - the `candleStand` and `sign` parametric examples above
 
